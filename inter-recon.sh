@@ -1,5 +1,5 @@
 #!/bin/bash
-#Wrote by Mario Sala (A2SECURE)
+#Wrote by Mario Sala (A2SECURE) INTERNON
 #example of comand inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type}
 #inter-recon.sh -h for usage information
 
