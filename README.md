@@ -25,7 +25,7 @@ Output folder structure: (example)
     - aux/ -> folder with control the previous execution and skipped wfuzz URLs
       - nmap/ -> here we have all the nmaps to aquatone, we will remove the processed nmap files in aquatone process, for in case that there is an error, continue with that nmap file.
       - aquatone-full-initial-files.txt -> here we will remove the URLs that the execution was correct
-      - aquatone-skipped-urls.txt -> here we will add the URLs that we skipped because there was an error ((Total request + 1) - Processed request != 0)
+      - wfuzz-skipped-urls.txt -> here we will add the URLs that we skipped because there was an error ((Total request + 1) - Processed request != 0)
     - debug/ -> folder with debug the executions
       - interlace-output.txt -> interlace with nmap (version only) output execution
       - interlace-cve-output.txt -> interlace with nmap (nmap-vulners) output execution
@@ -53,3 +53,14 @@ To-Do:
   - Remove folders with not UP hosts in initial-files-found-http
   - Include on vulnerability scan the "OPENVAS scan"
   - Change folders and files name to make easier to read and understand.
+  
+Instalation tools URLs:
+  - Interlace: https://github.com/codingo/Interlace - 
+    - Arch-Linux) sudo pacman -S interlace
+  - Aquatone: https://github.com/michenriksen/aquatone
+    - Arch-Linux) sudo pacman -S aquatone
+  - Wfuzz: https://github.com/xmendez/wfuzz
+    - Arch-Linux) sudo pacman -S wfuzz
+  - Eyewitness: https://github.com/FortyNorthSecurity/EyeWitness
+    - Arch-Linux) sudo pacman -S eyewitness
+  - Nmap-vulners: https://github.com/vulnersCom/nmap-vulners
