@@ -3,22 +3,22 @@ Script to perform automatic initial web and vulnerability recon.
 It has some checks in case of errors.
 There is a possibility to skip some checks, to restart them and/or to continue with the last point you stopped. (This is because sometimes there are network issues like time limit on VPN).
 
-How to use:
+## How to use:
   inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type}
 
-Structure:
+## Structure:
   - First ports scan with version (nmap, requires sudo)
   - Web fuzzing recon scan (aquatone, wfuzz, eyewitness)
   - Vulnerability recon scan (command to parse ports into services files, nmap with nmap-vulners script)
 
-Applications used:
+## Applications used:
   - interlace (just for paralelization, it can be removed but i like the speed for nmap)
   - nmap (version normal and with nmap-vulners script, both of them requires sudo)
   - aquatone (To get http ports from nmap execution)
   - wfuzz (To make fuzzing to the http ports)
   - eyewitness (To make screenshots to all Status 200 URLs. This could be removed and changed with aquatone, but personally i like the structured report it makes)
   
-Output folder structure: (example)
+## Output folder structure: (example)
   - 192.168.122.1-24/ -> initial folder
     - nmap/ -> folder with nmap on xml output with version
       - {IPs}.xml -> nmap output to import to some tools
@@ -48,13 +48,13 @@ Output folder structure: (example)
     - eyewitness-final-all-urls.txt -> final status 200 URLs found by wfuzz
     - targets.txt -> IP or network that you added on -t parameter
     
-To-Do:
+## To-Do:
   - Remove files in nmap folder with not UP hosts (If we make this before aquatone execution, we will solve the following point)
   - Remove folders with not UP hosts in initial-files-found-http
   - Include on vulnerability scan the "OPENVAS scan"
   - Change folders and files name to make easier to read and understand.
   
-Instalation tools URLs:
+## Instalation tools URLs:
   - Interlace: https://github.com/codingo/Interlace - 
     - Arch-Linux) sudo pacman -S interlace
   - Aquatone: https://github.com/michenriksen/aquatone
