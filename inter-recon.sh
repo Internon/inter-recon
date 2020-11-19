@@ -1,7 +1,7 @@
 #!/bin/bash
 #Wrote by Mario Sala (A2SECURE)
-#example of comand inter-web-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type}
-#inter-web-recon.sh -h for usage information
+#example of comand inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type}
+#inter-recon.sh -h for usage information
 
 function initvariables(){
 	INTERINITFOLDER=$(pwd)/$(echo $INTERTARGET | sed 's/\//-/g')
@@ -42,7 +42,7 @@ function displaytime {
 	timecalc="$timecalc $S seconds"
 }
 function scripthelp(){
-	echo "Usage: $0 -t {IP or IP/CIDR} -w {DICT PATH} -s {all/nmap/wfuzz/eyewitness}"
+	echo "Usage: $0 -t {IP or IP/CIDR} -w {DICT PATH} -s {all/web/vuln}"
 	echo "[INFO] - '-w' (I recommend you that if you have a lot of web services and low time use the /dictionaries/common.txt at least to start)"
 }
 
