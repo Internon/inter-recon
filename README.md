@@ -1,7 +1,11 @@
 # inter-recon
 Script to perform automatic initial web and vulnerability recon.
+
 It has some checks in case of errors.
+
 There is a possibility to skip some checks, to restart them and/or to continue with the last point you stopped. (This is because sometimes there are network issues like time limit on VPN).
+
+Remember if you copy or link the inter-recon script to bin path (ex: /usr/bin/) you can execute the script from where you want. It will create the output where you are.
 
 ## How to use:
   inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type}
