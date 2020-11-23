@@ -56,6 +56,8 @@ Remember if you copy or link the inter-recon script to bin path (ex: /usr/bin/) 
   - Remove files in nmap folder with not UP hosts (If we make this before aquatone execution, we will solve the following point)
   - Remove folders with not UP hosts in initial-files-found-http
   - Include on vulnerability scan the "OPENVAS scan"
+  - Include on web scan the URL and domains catching from http URLs found by wfuzz
+  - Include a new scan type that is OSINT, that can execute some get information from web or from diferent script executions.
   - Change folders and files name to make easier to read and understand.
   
 ## Instalation tools URLs:
