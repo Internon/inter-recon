@@ -7,6 +7,8 @@ There is a possibility to skip some checks, to restart them and/or to continue w
 
 Remember if you copy or link the inter-recon script to bin path (ex: /usr/bin/) you can execute the script from where you want. It will create the output where you are.
 
+This script is correctly being executed with /bin/bash. I had some problems executing in dash, so if you are executing this on kali, unlink /bin/sh and link it to /bin/bash, as interlace per default executes /bin/sh
+
 ## How to use:
   inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type}
 

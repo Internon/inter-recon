@@ -13,7 +13,7 @@ function initvariables(){
 	INTERCVEFOLDER=$INTERINITFOLDER/cve
 	INTERAUXFOLDER=$INTERINITFOLDER/aux
 	INTERSERVICESFOLDER=$INTERINITFOLDER/services
-	INTERFUZZFILTER="not (c=BBB and l=BBB and w=BBB)"
+	INTERFUZZFILTER="c!=BBB and l!=BBB and w!=BBB"
 }
 
 function initfolders(){
@@ -100,7 +100,7 @@ function fuzzingscan() {
 	echo -e "\e[32m--------- Starting wfuzz process\e[0m"
 	echo "This is to retrieve new paths from URLs found by nmap and aquatone"
 	startwfuzzprocess=`date +%s`
-	if [ -f "$INTERAUXFOLDER/aquatone-full-initial-files.txt" ]; then
+	if [ -f "$INTERAUXFOLDER/aquatone-full-initial-files.txt" ] || [ -f "$INTERAUXFOLDER/wfuzz-skipped-urls.txt" ]; then
 		echo -e "\e[33mFound previous not ended fuzzing process execution\e[0m"
 		echo -e "\e[96mDo you want to continue from previous execution? ([n]/[y] default):\e[0m"
 		read continuepreviousfuzzing
@@ -121,6 +121,7 @@ function fuzzingscan() {
 				else
 					echo "Adding skipped files to process URLs"
 					cat $INTERAUXFOLDER/wfuzz-skipped-urls.txt | sort -u >> $INTERAUXFOLDER/aquatone-full-initial-files.txt
+					rm $INTERAUXFOLDER/wfuzz-skipped-urls.txt 
 				fi
 			fi
 		fi
@@ -140,14 +141,17 @@ function fuzzingscan() {
 	read skippallURLs
 	if [ "$skippallURLs" == "y" ]; then
 		echo "Skipping all URLs with errors (Recommended when no network or VPN issues, or small dictionaries)"
-		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --conn-delay 10 --req-delay 10 --efield url -t 40 --filter "$INTERFUZZFILTER" -w $INTERDICT -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ;done
+		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --conn-delay 10 --req-delay 10 --efield url -t 40 --filter "$INTERFUZZFILTER" -w $INTERDICT --zE urlencode -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ;done
 		echo "Skipped URLs in $INTERAUXFOLDER/wfuzz-skipped-urls.txt"	
 	else
 		echo "You will be asked to skip an URL with error (Recommended when network or VPN issues (like time limit in VPN), and for big dictionaries)"
-		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --efield url -t 40 --filter "$INTERFUZZFILTER" -w $INTERDICT -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo -e "\e[96mDo you want to skip this URL and continue? ([y] default/[n]):\e[0m"; read skipURL ; if [ "$skipURL" == "n" ]; then echo "We will stop the process here. To continue with the process, execute again the script, it will make fuzzing to the files not processed yet."; exit 1; else echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt;  fi ; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ;done
+		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --efield url -t 40 --filter "$INTERFUZZFILTER" -w $INTERDICT --zE urlencode -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo -e "\e[96mDo you want to skip this URL and continue? ([y] default/[n]):\e[0m"; read skipURL ; if [ "$skipURL" == "n" ]; then echo "We will stop the process here. To continue with the process, execute again the script, it will make fuzzing to the files not processed yet."; exit 1; else echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt;  fi ; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ;done
 	fi
-
-	rm $INTERAUXFOLDER/aquatone-full-initial-files.txt
+	if [ "$(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt)" == "" ]; then
+		rm $INTERAUXFOLDER/aquatone-full-initial-files.txt
+	else
+		echo -e "\e[33m[WARNING] - There are some URLs skipped on $INTERAUXFOLDER/aquatone-full-initial-files.txt, if you want to try them restart the program without skipping skipped URLs\e[0m"
+	fi
 	endwfuzzprocess=`date +%s`
 	echo -e "\e[32m--------- Ended wfuzz process\e[0m"
 	displaytime `expr $endwfuzzprocess - $startwfuzzprocess`
@@ -339,8 +343,8 @@ function scanall() {
 		mkdir $INTERNMAPFOLDER
 		portscan
 	fi
-	webscan
 	vulnscan
+	webscan
 	endallprocess=`date +%s`
 	echo -e "\e[35mEnded all processes\e[0m"
 	displaytime `expr $endallprocess - $startallprocess`
