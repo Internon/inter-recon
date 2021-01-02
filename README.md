@@ -44,14 +44,18 @@ This script is correctly being executed with /bin/bash. I had some problems exec
       - {SERVICE-NAME}-services.txt -> services execution with IP,PORT,Extra-service-info output
     - cve/ -> folder with vulnerabilities by host found by nmap-vulners script
       - {IPs}.txt -> nmap-vulners script output
-    - initial-files-found-http/ -> folder with screenshot of initial URL files found by nmap
+    - http-discover/ -> folder with screenshot of initial URL files found by nmap
       - {IPs} -> folders with screenshots by IP of nmap
-    - eyewitness-urls-found/ -> folder with screenshots of status 200 URLs found by wfuzz
+    - screenshots/ -> folder with screenshots of status 200 URLs found by wfuzz
       - screens -> folder with all screenshots
       - report.html -> report with structured information
       - {OTHER} -> other things to report.html
     - aquatone-full-initial-files.txt -> files with initial aquatone found URLs to make fuzzing with wfuzz
-    - eyewitness-final-all-urls.txt -> final status 200 URLs found by wfuzz
+    - eyewitness-200-urls.txt -> final status 200 URLs found by wfuzz
+    - eyewitness-100-urls.txt -> final status 100 URLs found by wfuzz
+    - eyewitness-300-urls.txt -> final status 300 URLs found by wfuzz
+    - eyewitness-400-urls.txt -> final status 400 URLs found by wfuzz
+    - eyewitness-500-urls.txt -> final status 500 URLs found by wfuzz 
     - targets.txt -> IP or network that you added on -t parameter
     
 ## To-Do:
