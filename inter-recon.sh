@@ -13,6 +13,7 @@ function initvariables(){
 	INTERCVEFOLDER=$INTERINITFOLDER/cve
 	INTERAUXFOLDER=$INTERINITFOLDER/aux
 	INTERSERVICESFOLDER=$INTERINITFOLDER/services
+	INTERBYP4XXFOLDER=$INTERINITFOLDER/bypass
 	INTERFUZZFILTER="not (c=BBB and l=BBB and w=BBB)"
 }
 
@@ -158,16 +159,26 @@ function screenshotscan() {
 	echo -e "\e[32m--------- Starting eyewitness process\e[0m"
 	echo "This is to make screenshots of all status 200 URLs found after fuzzing"
 	starteyewitnessprocess=`date +%s`
-	cat $INTERFUZZINGFOLDER/*.txt |grep "C=2" | grep http | awk -F "|" '{print $2}' | grep http | sed 's/^ //g' | sed 's/"//g' | sort -u > $INTERINITFOLDER/eyewitness-200-urls.txt
-	cat $INTERFUZZINGFOLDER/*.txt |grep "C=1" | grep http | awk -F "|" '{print $2}' | grep http | sed 's/^ //g' | sed 's/"//g' | sort -u > $INTERINITFOLDER/eyewitness-100-urls.txt
-	cat $INTERFUZZINGFOLDER/*.txt |grep "C=3" | grep http | awk -F "|" '{print $2}' | grep http | sed 's/^ //g' | sed 's/"//g' | sort -u > $INTERINITFOLDER/eyewitness-300-urls.txt
-	cat $INTERFUZZINGFOLDER/*.txt |grep "C=4" | grep http | awk -F "|" '{print $2}' | grep http | sed 's/^ //g' | sed 's/"//g' | sort -u > $INTERINITFOLDER/eyewitness-400-urls.txt
-	cat $INTERFUZZINGFOLDER/*.txt |grep "C=5" | grep http | awk -F "|" '{print $2}' | grep http | sed 's/^ //g' | sed 's/"//g' | sort -u > $INTERINITFOLDER/eyewitness-500-urls.txt	
-	eyewitness -f $INTERINITFOLDER/eyewitness-200-urls.txt --jitter 1 -d $INTEREYEWITNESSFOLDER --timeout 60 --threads 10 --web --max-retries 1 --no-prompt >& $INTERDEBUGFOLDER/eyewitness-output.txt
+	cat $INTERFUZZINGFOLDER/*.txt |grep "C=2" | grep http | awk -F "|" '{print $2}' | grep http | sed 's/^ //g' | sed 's/"//g' | sort -u > $INTERINITFOLDER/eyewitness-200-parsed-urls.txt
+	cat $INTERFUZZINGFOLDER/*.txt | grep http | sed 's/.* C=//g' | sed 's/ .*|//g' | sed 's/"$//g' | grep -v "^Target: " | sort -u > $INTERINITFOLDER/all-urls-fuzzing-results.txt
+	allstatus=$(cat $INTERINITFOLDER/all-urls-fuzzing-results.txt | awk -F " " '{print $1}' | sort -u)
+	for status in $allstatus; do cat $INTERINITFOLDER/all-urls-fuzzing-results.txt | grep "^$status" | awk -F " " '{print $2}' | sort -u > $INTERINITFOLDER/urls-status-$status.txt ; done
+	eyewitness -f $INTERINITFOLDER/eyewitness-200-parsed-urls.txt --jitter 1 -d $INTEREYEWITNESSFOLDER --timeout 60 --threads 10 --web --max-retries 1 --no-prompt >& $INTERDEBUGFOLDER/eyewitness-output.txt
 	endeyewitnessprocess=`date +%s`
 	echo -e "\e[32m--------- Ended eyewitness process\e[0m"
 	displaytime `expr $endeyewitnessprocess - $starteyewitnessprocess`
 	echo "Execution time of eyewitness process was$timecalc."
+}
+
+function bypass403() {
+	echo -e "\e[32m--------- Starting bypass 403 status urls process\e[0m"
+	echo "This is to try some known bypasses of 403 fuzzing with some bypasses"
+	startbyp4xxprocess=`date +%s`
+	for url in $(cat $INTERINITFOLDER/urls-status-403.txt); do byp4xx -c $url > $INTERBYP4XXFOLDER/byp4xx-$(echo $url | sed 's/\//-/g' | sed 's/:/-/g').txt ; done >& $INTERDEBUGFOLDER/byp4xx-output.txt
+	endbyp4xxprocess=`date +%s`
+	echo -e "\e[32m--------- Ended bypass 403 urls prcess \e[0m"
+	displaytime `expr $endbyp4xxprocess - $startbyp4xxprocess`
+	echo "Execution time of bypass process was$timecalc."
 }
 
 function servicesparsing() {
@@ -186,8 +197,8 @@ function servicesparsing() {
 function cvescan() {
         echo -e "\e[32m--------- Starting scancves process\e[0m"
 	echo "This is to retrieve the possible CVEs that some services are vulnerable"
-	echo -e "\e[96mChoose min cvss to vulnerability scan: (Press enter = default 5.0)\e[0m"
-	read mincvss
+	#echo -e "\e[96mChoose min cvss to vulnerability scan: (Press enter = default 5.0)\e[0m"
+	#read mincvss
 	mincvss=${mincvss:-5.0}
 	startcveprocess=`date +%s`
 	sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 20 -c " if [[ \"\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g')\" != \"\" ]]; then nmap -sSV --script vulners --script-args=mincvss=$mincvss -T4 -Pn --open -p\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g') _target_ -oN $INTERCVEFOLDER/_target_.txt ; fi" &> $INTERDEBUGFOLDER/interlace-cve-output.txt
@@ -305,7 +316,7 @@ function webscan(){
 		echo -e "\e[33m[WARNING] - Final screenshot scan folder $INTEREYEWITNESSFOLDER exist.\e[0m"
 		echo -e "\e[96mDo you want to skip screenshotscan? ([y] default/[n]):\e[0m"
 		read skipscreenshotscan
-		if [ "$screenshotscan" == "n" ]; then
+		if [ "$skipscreenshotscan" == "n" ]; then
 			echo "Restarting final screenshot scan"
 			screenshotscan
 		else
@@ -313,6 +324,24 @@ function webscan(){
 		fi
 	else
 		screenshotscan
+	fi
+	if [ -f "$INTERINITFOLDER/byp4xx-output.txt" ]; then
+		echo -e "\e[33m[WARNING] - byp4xx output file exist.\e[0m"
+		echo -e "\e[96mDo you want to skip byp4xx process? ([y] default/[n]):\e[0m"
+                read skipbyp4xx
+		if [ "$skipbyp4xx" == "n" ]; then
+                        echo "Restarting bypass scan"
+			if [ -f "$INTERINITFOLDER/urls-status-403.txt" ]; then
+				bypass403
+			fi
+		else
+			echo "skipping bypass 403 urls scan"
+		fi
+	else
+		if [ -f "$INTERINITFOLDER/urls-status-403.txt" ]; then
+                	bypass403
+        	fi
+
 	fi
 	#Now you have some screenshots to review with eyewitness you can open the report and check it there directly that it makes some groups and is easier
 	endwebprocess=`date +%s`
