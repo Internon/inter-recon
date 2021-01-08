@@ -11,14 +11,14 @@ This script is correctly being executed with /bin/bash. I had some problems exec
 
 To use multiple known domain/IPs:
 - Create file domains.txt
-- Execute: for domain in $(cat domains.txt); do inter-recon -t $domain -w {DICTPATH} -s all; done
+- Execute: for domain in $(cat domains.txt); do inter-recon -t $domain -w {DICTPATH} -s all -a; done
 
 ## How to use:
-  inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type}
+  inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type} -a {optional is for superautomaticscan skipping all and not asking anything on wfuzz process at fisrt time execution}
 
 ## Structure:
   - First ports scan with version (nmap, requires sudo)
-  - Web fuzzing recon scan (aquatone, wfuzz, eyewitness)
+  - Web fuzzing recon scan (aquatone, wfuzz, eyewitness, byp4xx 403 files)
   - Vulnerability recon scan (command to parse ports into services files, nmap with nmap-vulners script)
 
 ## Applications used:
@@ -27,6 +27,7 @@ To use multiple known domain/IPs:
   - aquatone (To get http ports from nmap execution)
   - wfuzz (To make fuzzing to the http ports)
   - eyewitness (To make screenshots to all Status 200 URLs. This could be removed and changed with aquatone, but personally i like the structured report it makes)
+  - byp4xx (To try bypass 403 urls by different methods)
   
 ## Output folder structure: (example)
   - 192.168.122.1-24/ -> initial folder
@@ -80,3 +81,4 @@ To use multiple known domain/IPs:
   - Eyewitness: https://github.com/FortyNorthSecurity/EyeWitness
     - Arch-Linux) sudo pacman -S eyewitness
   - Nmap-vulners: https://github.com/vulnersCom/nmap-vulners
+  - byp4xx: https://github.com/lobuhi/byp4xx/	
