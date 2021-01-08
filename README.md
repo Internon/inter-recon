@@ -9,6 +9,10 @@ Remember if you copy or link the inter-recon script to bin path (ex: /usr/bin/) 
 
 This script is correctly being executed with /bin/bash. I had some problems executing in dash, so if you are executing this on kali, unlink /bin/sh and link it to /bin/bash, as interlace per default executes /bin/sh
 
+To use multiple known domain/IPs:
+- Create file domains.txt
+- Execute: for domain in $(cat domains.txt); do inter-recon -t $domain -w {DICTPATH} -s all; done
+
 ## How to use:
   inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type}
 

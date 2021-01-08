@@ -407,8 +407,9 @@ if [[ -z $INTERTARGET ]] || [[ -z $INTERDICT ]] || [[ -z $INTERSCANTYPE ]]; then
 else
 	re='^(0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))\.){3}.[0-2]?[0-9]|'
 	re+='0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))$'
+	re2='^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}$'
 
-	if [[ ! "$INTERTARGET" =~ $re ]]; then
+	if [[ ! "$INTERTARGET" =~ $re ]] && [[ ! "$INTERTARGET" =~ $re2 ]]; then
 		echo -e "\e[91mERROR:    Parameter -t should be an IP or IP/CIDR\e[0m"
 		scripthelp
 		exit 1
