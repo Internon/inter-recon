@@ -43,8 +43,9 @@ function displaytime {
 	timecalc="$timecalc $S seconds"
 }
 function scripthelp(){
-	echo "Usage: $0 -t {IP or IP/CIDR} -w {DICT PATH} -s {all/web/vuln}"
+	echo "Usage: $0 -t {IP or IP/CIDR} -w {DICT PATH} -s {all/web/vuln} -a"
 	echo "[INFO] - '-w' (I recommend you that if you have a lot of web services and low time use the /dictionaries/common.txt at least to start)"
+	echo "[INFO] - '-a' is for super automatic scan skipping all skipable and not asking anything, just executing all without configuration and neither re-execution of anything"
 }
 
 function portscan() {
@@ -136,16 +137,21 @@ function fuzzingscan() {
 		fi
 
 	fi
-	echo -e "\e[96mDo you want to skip all URLs with errors? ([n] default. You will be asked for skipping/[y] Automatic skip):\e[0m"
+	if [[ ! -z $INTERSUPERAUTOMATICSCAN ]]; then
+		echo -e "\e[96mDo you want to skip all URLs with errors? ([n] default. You will be asked for skipping/[y] Automatic skip):\e[0m"
 
-	read skippallURLs
-	if [ "$skippallURLs" == "y" ]; then
-		echo "Skipping all URLs with errors (Recommended when no network or VPN issues, or small dictionaries)"
-		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --conn-delay 10 --req-delay 10 --efield url -t 20 --filter "$INTERFUZZFILTER" -w $INTERDICT -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ; sleep 10 ;done
-		echo "Skipped URLs in $INTERAUXFOLDER/wfuzz-skipped-urls.txt"	
+		read skippallURLs
+		if [ "$skippallURLs" == "y" ]; then
+			echo "Skipping all URLs with errors (Recommended when no network or VPN issues, or small dictionaries)"
+			for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --conn-delay 10 --req-delay 10 --efield url -t 20 --filter "$INTERFUZZFILTER" -w $INTERDICT -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ; sleep 10 ;done
+			echo "Skipped URLs in $INTERAUXFOLDER/wfuzz-skipped-urls.txt"	
+		else
+			echo "You will be asked to skip an URL with error (Recommended when network or VPN issues (like time limit in VPN), and for big dictionaries)"
+			for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --efield url -t 20 --filter "$INTERFUZZFILTER" -w $INTERDICT -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo -e "\e[96mDo you want to skip this URL and continue? ([y] default/[n]):\e[0m"; read skipURL ; if [ "$skipURL" == "n" ]; then echo "We will stop the process here. To continue with the process, execute again the script, it will make fuzzing to the files not processed yet."; exit 1; else echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt;  fi ; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ; sleep 10 ;done
+		fi
 	else
-		echo "You will be asked to skip an URL with error (Recommended when network or VPN issues (like time limit in VPN), and for big dictionaries)"
-		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --efield url -t 20 --filter "$INTERFUZZFILTER" -w $INTERDICT -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo -e "\e[96mDo you want to skip this URL and continue? ([y] default/[n]):\e[0m"; read skipURL ; if [ "$skipURL" == "n" ]; then echo "We will stop the process here. To continue with the process, execute again the script, it will make fuzzing to the files not processed yet."; exit 1; else echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt;  fi ; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ; sleep 10 ;done
+		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --conn-delay 10 --req-delay 10 --efield url -t 20 --filter "$INTERFUZZFILTER" -w $INTERDICT -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ; sleep 10 ;done
+		echo "Skipped URLs in $INTERAUXFOLDER/wfuzz-skipped-urls.txt"
 	fi
 
 	rm $INTERAUXFOLDER/aquatone-full-initial-files.txt
@@ -383,13 +389,16 @@ function scanall() {
 function followingsteps() {
 	echo '[INFO EXTRA] - Remember to check the following things depending of your scan: \n   - (WEBSCAN) The screenshot folder \n   - (VULNSCAN) The cve folder \n   - (VULNSCAN) The services folder \n   - (WEBSCAN) The files with name eyewitness*, as with this script we only perform a 200 screenshot and not other Status responses. On other responses maybe there is something where you can exploit ;).'
 }
-while getopts "ht:w:s:" OPTION
+while getopts "ht:w:s:a:" OPTION
 do
      case $OPTION in
          h)
              scripthelp
              exit 1
              ;;
+         a)
+             INTERSUPERAUTOMATICSCAN=$OPTARG
+	     ;;
          t)
              INTERTARGET=$OPTARG
              ;;
@@ -407,7 +416,10 @@ if [[ -z $INTERTARGET ]] || [[ -z $INTERDICT ]] || [[ -z $INTERSCANTYPE ]]; then
 else
 	re='^(0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))\.){3}.[0-2]?[0-9]|'
 	re+='0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))$'
-	re2='^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}$'
+#	re2='^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}$'
+	#re2='^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$'
+	re2='^[A-Za-z0-9\-\.]+'
+
 
 	if [[ ! "$INTERTARGET" =~ $re ]] && [[ ! "$INTERTARGET" =~ $re2 ]]; then
 		echo -e "\e[91mERROR:    Parameter -t should be an IP or IP/CIDR\e[0m"
