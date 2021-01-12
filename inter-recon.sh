@@ -4,7 +4,9 @@
 #inter-recon.sh -h for usage information
 
 function initvariables(){
-	INTERINITFOLDER=$(pwd)/$(echo $INTERTARGET | sed 's/\//-/g')
+	if [[ -z $INTERINITFOLDER ]]; then
+		INTERINITFOLDER=$(pwd)/$(echo $INTERTARGET | sed 's/\//-/g')
+	fi
 	INTERDEBUGFOLDER=$INTERINITFOLDER/debug
 	INTERNMAPFOLDER=$INTERINITFOLDER/nmap
 	INTERDISCOVERHTTPFOLDER=$INTERINITFOLDER/http-discover
@@ -43,7 +45,17 @@ function displaytime {
 	timecalc="$timecalc $S seconds"
 }
 function scripthelp(){
-	echo "Usage: $0 -t {IP or IP/CIDR} -w {DICT PATH} -s {all/web/vuln} -a"
+	echo "Usage: $0 [OPTIONS]"
+	echo "	Options:"
+	echo "		-T {file with targets by line}"
+	echo "		-t {IP or IP/CIDR}"
+	echo "		-d {directory name for initfolder}"
+	echo "		-w {DICT PATH}"
+        echo "	 	-s {all/web/vuln}"
+        echo "		-a superautomaticscan"
+	echo "	Examples:"
+	echo "		inter-recon -t 127.0.0.1 -w \$(pwd)/dict.txt -s all -a"
+	echo "		inter-recon -T targets.txt -d domains -w \$(pwd)/dict.txt -s all -a"
 	echo "[INFO] - '-w' (I recommend you that if you have a lot of web services and low time use the /dictionaries/common.txt at least to start)"
 	echo "[INFO] - '-a' is for super automatic scan skipping all skipable and not asking anything, just executing all without configuration and neither re-execution of anything"
 }
@@ -53,7 +65,11 @@ function portscan() {
 	echo "This is to retrieve all ports with version (sudo required for nmap -sSV scan)"
 	startallprocess=`date +%s`
 	#Nmap
-	echo $INTERTARGET > $INTERINITFOLDER/targets.txt
+	if [[ ! -z $INTERTARGETFILE ]]; then
+		cp $INTERTARGETFILE $INTERINITFOLDER/targets.txt
+	else
+		echo $INTERTARGET > $INTERINITFOLDER/targets.txt
+	fi
 	startinterlaceprocess=`date +%s`
 	sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 100 -c "nmap -sSV -T4 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX - --open -p- _target_ > $INTERNMAPFOLDER/_target_.xml" &> $INTERDEBUGFOLDER/interlace-output.txt
 	endinterlaceprocess=`date +%s`
@@ -389,7 +405,7 @@ function scanall() {
 function followingsteps() {
 	echo '[INFO EXTRA] - Remember to check the following things depending of your scan: \n   - (WEBSCAN) The screenshot folder \n   - (VULNSCAN) The cve folder \n   - (VULNSCAN) The services folder \n   - (WEBSCAN) The files with name eyewitness*, as with this script we only perform a 200 screenshot and not other Status responses. On other responses maybe there is something where you can exploit ;).'
 }
-while getopts "ht:w:s:a:" OPTION
+while getopts "hd:T:t:w:s:a" OPTION
 do
      case $OPTION in
          h)
@@ -398,6 +414,12 @@ do
              ;;
          a)
              INTERSUPERAUTOMATICSCAN=$OPTARG
+             ;;
+         d)
+	     INTERINITFOLDER=$OPTARG
+	     ;;
+         T) 
+	     INTERTARGETFILE=$OPTARG
 	     ;;
          t)
              INTERTARGET=$OPTARG
@@ -410,21 +432,19 @@ do
              ;;
      esac
 done
-if [[ -z $INTERTARGET ]] || [[ -z $INTERDICT ]] || [[ -z $INTERSCANTYPE ]]; then
-	scripthelp
-	exit 1
-else
+if ([[ ! -z $INTERTARGET ]] && [[ !  -z $INTERDICT ]] && [[ !  -z $INTERSCANTYPE ]]) || ([[ ! -z $INTERTARGETFILE ]] && [[ ! -z $INTERDICT ]] && [[ ! -z $INTERSCANTYPE ]] && [[ ! -z $INTERINITFOLDER ]]); then
 	re='^(0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))\.){3}.[0-2]?[0-9]|'
 	re+='0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))$'
 #	re2='^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}$'
 	#re2='^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$'
 	re2='^[A-Za-z0-9\-\.]+'
 
-
-	if [[ ! "$INTERTARGET" =~ $re ]] && [[ ! "$INTERTARGET" =~ $re2 ]]; then
-		echo -e "\e[91mERROR:    Parameter -t should be an IP or IP/CIDR\e[0m"
-		scripthelp
-		exit 1
+	if [[ ! -z $INTERTARGET ]]; then
+		if [[ ! "$INTERTARGET" =~ $re ]] && [[ ! "$INTERTARGET" =~ $re2 ]]; then
+			echo -e "\e[91mERROR:    Parameter -t should be an IP or IP/CIDR\e[0m"
+			scripthelp
+			exit 1
+		fi
 	fi
 	if [ ! -f $INTERDICT ]; then
 		echo -e "\e[91mERROR:	Parameter -w, dictionary file not found\e[0m"
@@ -435,6 +455,13 @@ else
 		echo -e "\e[91mERROR:	Parameter -s, scan type must be all, web, vuln\e[0m"
 		scripthelp
 		exit 1
+	fi
+	if [[ ! -z $INTERTARGETFILE ]]; then
+	       if [ ! -f $INTERTARGETFILE ]; then
+		       echo -e "\e[91mERROR:   Parameter -T , target file not found\e[0m"
+		       scripthelp
+		       exit 1
+	       fi
 	fi
 	initvariables
 	initfolders
@@ -455,5 +482,8 @@ else
 			exit 1
 			;;
 	esac
+	exit 1
+else
+	scripthelp
 	exit 1
 fi

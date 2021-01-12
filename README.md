@@ -14,7 +14,13 @@ To use multiple known domain/IPs:
 - Execute: for domain in $(cat domains.txt); do inter-recon -t $domain -w {DICTPATH} -s all -a; done
 
 ## How to use:
-  inter-recon.sh -t {NET OR IP} -w {DICT PATH} -s {scan type} -a {optional is for superautomaticscan skipping all and not asking anything on wfuzz process at fisrt time execution}
+  inter-recon.sh [OPTIONS]
+		-t {NET OR IP}
+		-T {Target PATH}
+		-d {Dictionary Name}
+		-w {DICT PATH}
+		-s {scan type}
+		-a optional is for superautomaticscan skipping all and not asking anything on wfuzz process at fisrt time execution
 
 ## Structure:
   - First ports scan with version (nmap, requires sudo)
