@@ -208,7 +208,7 @@ function servicesparsing() {
 	echo -e "\e[32m--------- Starting services parsing process\e[0m"
 	echo "This is to parse the services found by nmap and make readable output"
 	startservicesparsingprocess=`date +%s`
-	for i in $(ls $INTERNMAPFOLDER/); do portsandservices=$(cat $INTERNMAPFOLDER/$i | grep 'service name=\"' | sed 's/.*portid="//g' | sed 's/".*service name=\"/,/g' | sed 's/" product="/,/g' | sed 's/" version="/,version /g' | sed 's/" extrainfo="/ /g'  | sed 's/" method="/,method /g' | sed 's/" conf="/,conf /g' | sed 's/".*//g'); uniqueservices=$(echo "$portsandservices" | awk -F ',' '{print $2}' | sort -u); for service in $(echo "$uniqueservices"); do echo "$portsandservices" | grep ",$service$\|,$service," | awk -F ',' -v ip=$(echo $i | sed 's/.xml//g') '{print ip","$1","$2","$3","$4","$5}' >> $INTERSERVICESFOLDER/$service-service.txt; done ;done
+	for i in $(ls $INTERNMAPFOLDER/); do portsandservices=$(cat $INTERNMAPFOLDER/$i | grep 'service name=\"' | sed 's/.*portid="//g' | sed 's/".*service name=\"/,/g' | sed 's/" product="/,/g' | sed 's/" version="/,version /g' | sed 's/" extrainfo="/ /g'  | sed 's/" method="/,method /g' | sed 's/" conf="/,conf /g' | sed 's/".*//g'); uniqueservices=$(echo "$portsandservices" | awk -F ',' '{print $2}' | awk -F' ' '{print $1}' | sort -u); for service in $(echo "$uniqueservices"); do echo "$portsandservices" | grep ",$service$\|,$service," | awk -F ',' -v ip=$(echo $i | sed 's/.xml//g') '{print ip","$1","$2","$3","$4","$5}' >> $INTERSERVICESFOLDER/$service-service.txt; done ;done
 	echo "Review services output in $INTERSERVICESFOLDER folder"
 	endservicesparsingprocess=`date +%s`
 	echo -e "\e[32m--------- Ended services parsing process\e[0m"
