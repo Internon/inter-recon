@@ -49,15 +49,16 @@ function scripthelp(){
 	echo "	Options:"
 	echo "		-T {file with targets by line}"
 	echo "		-t {IP or IP/CIDR}"
-	echo "		-d {directory name for initfolder}"
+	echo "		-d {directory path for initfolder}"
 	echo "		-w {DICT PATH}"
         echo "	 	-s {all/web/vuln}"
         echo "		-a superautomaticscan"
 	echo "	Examples:"
 	echo "		inter-recon -t 127.0.0.1 -w \$(pwd)/dict.txt -s all -a"
-	echo "		inter-recon -T targets.txt -d domains -w \$(pwd)/dict.txt -s all -a"
+	echo "		inter-recon -T targets.txt -d \$(pwd)/domains -w \$(pwd)/dict.txt -s all -a"
 	echo "[INFO] - '-w' (I recommend you that if you have a lot of web services and low time use the /dictionaries/common.txt at least to start)"
 	echo "[INFO] - '-a' is for super automatic scan skipping all skipable and not asking anything, just executing all without configuration and neither re-execution of anything"
+	echo "[INFO] - '-d' and '-w' must be a full static path ex: /tmp/recon"
 }
 
 function portscan() {

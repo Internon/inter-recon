@@ -11,21 +11,21 @@ This script is correctly being executed with /bin/bash. I had some problems exec
 
 To use multiple known domain/IPs:
 - Create file domains.txt
-- Execute: for domain in $(cat domains.txt); do inter-recon -t $domain -w {DICTPATH} -s all -a; done
+- Execute: inter-recon -T {target file path to use} -d {Directory full path to work on} -w {dictionary full path} -s {scan type} -a; done
 
 ## How to use:
   inter-recon.sh [OPTIONS]
 		-t {NET OR IP}
 		-T {Target PATH}
-		-d {Dictionary Name}
+		-d {Dictionary Path}
 		-w {DICT PATH}
 		-s {scan type}
 		-a optional is for superautomaticscan skipping all and not asking anything on wfuzz process at fisrt time execution
 
 ## Structure:
   - First ports scan with version (nmap, requires sudo)
-  - Web fuzzing recon scan (aquatone, wfuzz, eyewitness, byp4xx 403 files)
   - Vulnerability recon scan (command to parse ports into services files, nmap with nmap-vulners script)
+  - Web fuzzing recon scan (aquatone, wfuzz, eyewitness, byp4xx 403 files)
 
 ## Applications used:
   - interlace (just for paralelization, it can be removed but i like the speed for nmap)
@@ -62,12 +62,9 @@ To use multiple known domain/IPs:
       - report.html -> report with structured information
       - {OTHER} -> other things to report.html
     - aquatone-full-initial-files.txt -> files with initial aquatone found URLs to make fuzzing with wfuzz
-    - eyewitness-200-urls.txt -> final status 200 URLs found by wfuzz
-    - eyewitness-100-urls.txt -> final status 100 URLs found by wfuzz
-    - eyewitness-300-urls.txt -> final status 300 URLs found by wfuzz
-    - eyewitness-400-urls.txt -> final status 400 URLs found by wfuzz
-    - eyewitness-500-urls.txt -> final status 500 URLs found by wfuzz 
+    - urls-status-$status.txt -> final status URLs found by wfuzz it changes depending on variable $status that is the status of the URLs found
     - targets.txt -> IP or network that you added on -t parameter
+    - bypass -> Folder with byp4xx lobuhi application
     
 ## To-Do:
   - Remove files in nmap folder with not UP hosts (If we make this before aquatone execution, we will solve the following point)
