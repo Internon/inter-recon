@@ -348,13 +348,14 @@ function webscan(){
 	else
 		screenshotscan
 	fi
-	if [ -f "$INTERINITFOLDER/byp4xx-output.txt" ]; then
-		echo -e "\e[33m[WARNING] - byp4xx output file exist.\e[0m"
+	if [ -d "$INTERBYP4XXFOLDER" ]; then
+		echo -e "\e[33m[WARNING] - byp4xx output folder exist.\e[0m"
 		echo -e "\e[96mDo you want to skip byp4xx process? ([y] default/[n]):\e[0m"
                 read skipbyp4xx
 		if [ "$skipbyp4xx" == "n" ]; then
                         echo "Restarting bypass scan"
 			if [ -f "$INTERINITFOLDER/urls-status-403.txt" ]; then
+				mkdir $INTERBYP4XXFOLDER
 				bypass403
 			fi
 		else
@@ -362,6 +363,7 @@ function webscan(){
 		fi
 	else
 		if [ -f "$INTERINITFOLDER/urls-status-403.txt" ]; then
+			mkdir $INTERBYP4XXFOLDER
                 	bypass403
         	fi
 
