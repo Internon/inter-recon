@@ -67,6 +67,7 @@ To use multiple known domain/IPs:
     - bypass -> Folder with byp4xx lobuhi application
     
 ## To-Do:
+  - Add enum4linux and smbmap
   - Remove files in nmap folder with not UP hosts (If we make this before aquatone execution, we will solve the following point)
   - Remove folders with not UP hosts in initial-files-found-http
   - Include on vulnerability scan the "OPENVAS scan"
