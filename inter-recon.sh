@@ -62,21 +62,25 @@ function scripthelp(){
 }
 
 function portscan() {
-	echo -e "\e[32m--------- Starting nmap interlace process\e[0m" 
-	echo "This is to retrieve all ports with version (sudo required for nmap -sSV scan)"
-	startallprocess=`date +%s`
+	echo -e "\e[32m--------- Starting port scan process\e[0m" 
+	echo "This is to retrieve all TCP ports and top UDP ports with version (sudo required for nmap -sSV and -sUV scan)"
+	startportscanprocess=`date +%s`
+	#startallprocess=`date +%s`
 	#Nmap
 	if [[ ! -z $INTERTARGETFILE ]]; then
 		cp $INTERTARGETFILE $INTERINITFOLDER/targets.txt
 	else
 		echo $INTERTARGET > $INTERINITFOLDER/targets.txt
 	fi
-	startinterlaceprocess=`date +%s`
-	sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 100 -c "nmap -sSV -T4 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX - --open -p- _target_ > $INTERNMAPFOLDER/_target_.xml" &> $INTERDEBUGFOLDER/interlace-output.txt
-	endinterlaceprocess=`date +%s`
-	echo -e "\e[32m--------- Ended nmaps using interlace process\e[0m"
-	displaytime `expr $endinterlaceprocess - $startinterlaceprocess`
-	echo "Execution time of all nmaps using interlace process was$timecalc."
+	#startinterlaceprocess=`date +%s`
+	sudo nmap -sSV -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX $INTERNMAPFOLDER/nmap-tcp-target.xml -oG $INTERNMAPFOLDER/nmap-tcp-target.gnmap --open -p- -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-tcp-output.txt
+	sudo nmap -sUV -T4 -F --max-retries 3 --min-parallelism 100 --host-timeout 5m --version-intensity 0 -oX $INTERNMAPFOLDER/nmap-udp-target.xml -oG $INTERNMAPFOLDER/nmap-udp-target.gnmap --open -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-udp-output.txt
+	#sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 100 -c "nmap -sSV -T4 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX - --open -p- _target_ > $INTERNMAPFOLDER/_target_.xml" &> $INTERDEBUGFOLDER/interlace-output.txt
+	#endinterlaceprocess=`date +%s`
+	echo -e "\e[32m--------- Ended port scan process\e[0m"
+	endportscanprocess=`date +%s`
+	displaytime `expr $endportscanprocess - $startportscanprocess`
+	echo "Execution time of all port scan process was$timecalc."
 	#Export all ports to file to postprocess (we might remove this because Adan have another script that can take open ports and we might reutilize this instead of metasploit output)
 	#echo 'Starting msfconsole retrieve all-ports from nmap process'
 	#startmsfconsoleprocess=`date +%s`
@@ -107,7 +111,8 @@ function initialaquatonescan() {
 			rm -f $INTERINITFOLDER/aquatone-full-initial-files.txt
 		fi
 	fi
-	for i in $(ls $INTERAUXFOLDER/nmap); do cat $INTERAUXFOLDER/nmap/$i | aquatone -nmap -screenshot-timeout 120000 -threads 4 -http-timeout 120000 --scan-timeout 120000 -out $INTERDISCOVERHTTPFOLDER/$(echo $i | sed 's/.xml//g'); cat $INTERDISCOVERHTTPFOLDER/$(echo $i | sed 's/.xml//g')/aquatone_urls.txt >> $INTERINITFOLDER/aquatone-full-initial-files.txt ; rm $INTERAUXFOLDER/nmap/$i ;done &> $INTERDEBUGFOLDER/aquatone-initial-files-output.txt
+	cat $INTERAUXFOLDER/nmap/nmap-tcp-target.xml | aquatone -nmap -screenshot-timeout 120000 -threads 4 -http-timeout 120000 --scan-timeout 120000 -out $INTERDISCOVERHTTPFOLDER/discover &> $INTERDEBUGFOLDER/aquatone-initial-files-output.txt
+	cat $INTERDISCOVERHTTPFOLDER/discover/aquatone_urls.txt > $INTERINITFOLDER/aquatone-full-initial-files.txt
 	rm -rf $INTERAUXFOLDER/nmap
 	endaquatoneprocess=`date +%s`
 	echo -e "\e[32m--------- Ended aquatone initial files process\e[0m"
@@ -208,7 +213,13 @@ function servicesparsing() {
 	echo -e "\e[32m--------- Starting services parsing process\e[0m"
 	echo "This is to parse the services found by nmap and make readable output"
 	startservicesparsingprocess=`date +%s`
-	for i in $(ls $INTERNMAPFOLDER/); do portsandservices=$(cat $INTERNMAPFOLDER/$i | grep 'service name=\"' | sed 's/.*portid="//g' | sed 's/".*service name=\"/,/g' | sed 's/" product="/,/g' | sed 's/" version="/,version /g' | sed 's/" extrainfo="/ /g'  | sed 's/" method="/,method /g' | sed 's/" conf="/,conf /g' | sed 's/".*//g'); uniqueservices=$(echo "$portsandservices" | awk -F ',' '{print $2}' | awk -F' ' '{print $1}' | sort -u); for service in $(echo "$uniqueservices"); do echo "$portsandservices" | grep ",$service$\|,$service," | awk -F ',' -v ip=$(echo $i | sed 's/.xml//g') '{print ip","$1","$2","$3","$4","$5}' >> $INTERSERVICESFOLDER/$service-service.txt; done ;done
+	uniqueservicestcp=$(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | tr -d '?' | sort -u)
+	for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/open\/tcp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-tcp.txt ; done
+	uniqueservicesudp=$(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | tr -d '?' | sed 's/|/-/g' | sort -u)
+        for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/[a-z]*\/udp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-udp.txt ; done
+	#for i in $(ls $INTERNMAPFOLDER/); do portsandservices=$(cat $INTERNMAPFOLDER/$i | grep 'service name=\"' | sed 's/.*portid="//g' | sed 's/".*service name=\"/,/g' | sed 's/" product="/,/g' | sed 's/" version="/,version /g' | sed 's/" extrainfo="/ /g'  | sed 's/" method="/,method /g' | sed 's/" conf="/,conf /g' | sed 's/".*//g'); uniqueservices=$(echo "$portsandservices" | awk -F ',' '{print $2}' | awk -F' ' '{print $1}' | sort -u); for service in $(echo "$uniqueservices"); do echo "$portsandservices" | grep ",$service$\|,$service," | awk -F ',' -v ip=$(echo $i | sed 's/.xml//g') '{print ip","$1","$2","$3","$4","$5}' >> $INTERSERVICESFOLDER/$service-service.txt; done ;done
+	for servicetcp in $(echo $uniqueservicestcp); do cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $servicetcp >> $INTERSERVICESFOLDER/tcp-$servicetcp-service.txt; done
+	for serviceudp in $(echo $uniqueservicesudp); do cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $serviceudp >> $INTERSERVICESFOLDER/udp-$serviceudp-service.txt; done
 	echo "Review services output in $INTERSERVICESFOLDER folder"
 	endservicesparsingprocess=`date +%s`
 	echo -e "\e[32m--------- Ended services parsing process\e[0m"
@@ -225,7 +236,8 @@ function cvescan() {
 	#mincvss=${mincvss:-5.0}
 	startcveprocess=`date +%s`
 	#sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 20 -c " if [[ \"\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g')\" != \"\" ]]; then nmap -sSV --script vulners --script-args=mincvss=$mincvss -T4 -Pn --open -p\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g') _target_ -oN $INTERCVEFOLDER/_target_.txt ; fi" &> $INTERDEBUGFOLDER/interlace-cve-output.txt
-	sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 20 -c " if [[ \"\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g')\" != \"\" ]]; then nmap -sSV -A -T4 -Pn --open -p\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g') _target_ -oN $INTERCVEFOLDER/_target_.txt ; fi" &> $INTERDEBUGFOLDER/interlace-cve-output.txt
+	for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/tcp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sSV -A -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/tcp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-tcp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-tcp-cve-output.txt
+	for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sUV -A -T4 -F --max-retries 3 --min-parallelism 100 --host-timeout 5m --version-intensity 0 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-udp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-udp-cve-output.txt
 	endcveprocess=`date +%s`
 	echo -e "\e[32m--------- Ended cve scan process\e[0m"
 	displaytime `expr $endcveprocess - $startcveprocess`
@@ -317,59 +329,64 @@ function webscan(){
 	else
 		initialaquatonescan
 	fi
-	if [ -d "$INTERFUZZINGFOLDER" ]; then
-		echo -e "\e[33m[WARNING] - Fuzzing scan folder $INTERFUZZINGFOLDER exist.\e[0m"
-		echo -e "\e[96mDo you want to skip fuzzingscan? ([y] default/[n]):\e[0m"
-		read skipfuzzingscan
-		if [ "$skipfuzzingscan" == "n" ]; then
-			echo "Restarting from fuzzing scan process"
-			fuzzingscan
-			screenshotscan
-			endwebprocess=`date +%s`
-			echo -e "\e[35mEnded web recon process\e[0m"
-			displaytime `expr $endwebprocess - $startwebprocess`
-			echo "Execution time of web recon process was$timecalc."
-			return
-		else
-			echo "Skipping fuzzing scan"
-		fi
-	else
-		fuzzingscan
-	fi
-	if [ -d "$INTEREYEWITNESSFOLDER" ]; then
-		echo -e "\e[33m[WARNING] - Final screenshot scan folder $INTEREYEWITNESSFOLDER exist.\e[0m"
-		echo -e "\e[96mDo you want to skip screenshotscan? ([y] default/[n]):\e[0m"
-		read skipscreenshotscan
-		if [ "$skipscreenshotscan" == "n" ]; then
-			echo "Restarting final screenshot scan"
-			screenshotscan
-		else
-			echo "Skipping screenshot scan"
-		fi
-	else
-		screenshotscan
-	fi
-	if [ -d "$INTERBYP4XXFOLDER" ]; then
-		echo -e "\e[33m[WARNING] - byp4xx output folder exist.\e[0m"
-		echo -e "\e[96mDo you want to skip byp4xx process? ([y] default/[n]):\e[0m"
-                read skipbyp4xx
-		if [ "$skipbyp4xx" == "n" ]; then
-                        echo "Restarting bypass scan"
-			if [ -f "$INTERINITFOLDER/urls-status-403.txt" ]; then
-				mkdir $INTERBYP4XXFOLDER
-				bypass403
+	if [[ "$(cat $INTERINITFOLDER/aquatone-full-initial-files.txt)" != "" ]]; then
+		if [ -d "$INTERFUZZINGFOLDER" ]; then
+			echo -e "\e[33m[WARNING] - Fuzzing scan folder $INTERFUZZINGFOLDER exist.\e[0m"
+			echo -e "\e[96mDo you want to skip fuzzingscan? ([y] default/[n]):\e[0m"
+			read skipfuzzingscan
+			if [ "$skipfuzzingscan" == "n" ]; then
+				echo "Restarting from fuzzing scan process"
+				fuzzingscan
+				screenshotscan
+				endwebprocess=`date +%s`
+				echo -e "\e[35mEnded web recon process\e[0m"
+				displaytime `expr $endwebprocess - $startwebprocess`
+				echo "Execution time of web recon process was$timecalc."
+				return
+			else
+				echo "Skipping fuzzing scan"
 			fi
 		else
-			echo "skipping bypass 403 urls scan"
+			fuzzingscan
+		fi
+		if [ -d "$INTEREYEWITNESSFOLDER" ]; then
+			echo -e "\e[33m[WARNING] - Final screenshot scan folder $INTEREYEWITNESSFOLDER exist.\e[0m"
+			echo -e "\e[96mDo you want to skip screenshotscan? ([y] default/[n]):\e[0m"
+			read skipscreenshotscan
+			if [ "$skipscreenshotscan" == "n" ]; then
+				echo "Restarting final screenshot scan"
+				screenshotscan
+			else
+				echo "Skipping screenshot scan"
+			fi
+		else
+			screenshotscan
+		fi
+		if [ -d "$INTERBYP4XXFOLDER" ]; then
+			echo -e "\e[33m[WARNING] - byp4xx output folder exist.\e[0m"
+			echo -e "\e[96mDo you want to skip byp4xx process? ([y] default/[n]):\e[0m"
+                	read skipbyp4xx
+			if [ "$skipbyp4xx" == "n" ]; then
+                        	echo "Restarting bypass scan"
+				if [ -f "$INTERINITFOLDER/urls-status-403.txt" ]; then
+					mkdir $INTERBYP4XXFOLDER
+					bypass403
+				fi
+			else
+				echo "Skipping bypass 403 urls scan"
+			fi
+		else
+			if [ -f "$INTERINITFOLDER/urls-status-403.txt" ]; then
+				mkdir $INTERBYP4XXFOLDER
+                		bypass403
+        		fi
+
 		fi
 	else
-		if [ -f "$INTERINITFOLDER/urls-status-403.txt" ]; then
-			mkdir $INTERBYP4XXFOLDER
-                	bypass403
-        	fi
-
+		echo -e "\e[33m[WARNING] - No HTTP/S URL found in initial http discovery process.\e[0m"
+		echo "Skipping processes dependents of initial http discovery process"
 	fi
-	#Now you have some screenshots to review with eyewitness you can open the report and check it there directly that it makes some groups and is easier
+	#Now if found any URL you have some screenshots to review with eyewitness you can open the report and check it there directly that it makes some groups and is easier
 	endwebprocess=`date +%s`
 	echo -e "\e[35mEnded web recon process\e[0m"
 	displaytime `expr $endwebprocess - $startwebprocess`
@@ -407,7 +424,15 @@ function scanall() {
 }
 
 function followingsteps() {
-	echo '[INFO EXTRA] - Remember to check the following things depending of your scan: \n   - (WEBSCAN) The screenshot folder \n   - (VULNSCAN) The cve folder \n   - (VULNSCAN) The services folder \n   - (WEBSCAN) The files with name eyewitness*, as with this script we only perform a 200 screenshot and not other Status responses. On other responses maybe there is something where you can exploit ;).'
+	echo '[INFO EXTRA] - Remember to check the following things depending of your scan:'
+	echo '   1 - (VULNSCAN) The services folder (Check vulnerable versions in searchsploit and google)'
+	echo '   2 - (VULNSCAN) The cve folder (Check known exploits from nmap scripts)'
+	echo '   3 - (VULNSCAN) Check services that you don"t know the version on nmap using netcat (Sometimes the version can"t be retrieved with nmap)'
+	echo '   4 - (WEBSCAN) The screenshot folder (Check the different http services)'
+        echo '   5 - (WEBSCAN) The files with name url-status-{200,401,403,etc}.txt (We only perform status 200 screenshot and on other status maybe there is something new)'
+	echo '   6 - (WEBSCAN) Fuzz paths in url-status-*.txt files (You can see other services/files inside first path with information)'
+	echo '   7 - (WEBSCAN) Try bruteforce credentials on some login pages (Check status 200, 401, 403)'
+	echo '============================================================================'
 }
 while getopts "hd:T:t:w:s:a" OPTION
 do
