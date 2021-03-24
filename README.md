@@ -41,14 +41,17 @@ To use on network/IP as eg.:
       - screenshot Status 200 URLs from fuzzing with eyewitness
       - 403 bypass techniques with byp4xx
     - following steps -> quick explanation of things to do after script execution
+    - Documentation folder and template structure -> Make a folder to add evidences and adding .md files with information related of the scans
   - vuln
     - portscan (Same as above)
     - vulnscan (Same as above)
     - following steps (Same as above)
+    - Documentation folder and template structure
   - web
     - portscan (Same as above)
     - webscan (Same as above)
     - following steps (Same as above)
+    - Documentation folder and template structure
 
 ## Structure:
   - First ports scan tcp and udp with version (nmap, requires sudo)
@@ -61,6 +64,13 @@ To use on network/IP as eg.:
   - wfuzz (To make fuzzing to the http ports)
   - eyewitness (To make screenshots to all Status 200 URLs. This could be removed and changed with aquatone, but personally i like the structured report it makes)
   - byp4xx (To try bypass 403 urls by different methods)
+  - smbmap (To get guest privileges related to network share folder)
+  - enum4linux (To get smb information with guest privileges)
+  - smbversion (To get the real version of smb)
+  - dnsrecon (To try to make a zone transfer to dns servers)
+  - crackmapexec (To get names related to the server)
+  - host (Get hostname of the dns server)
+  - dig (Get hostname of the dns server using the server as ns "@")
   
 ## Output folder structure: (example)
   - 192.168.122.1-24/ -> initial folder
@@ -110,8 +120,13 @@ To use on network/IP as eg.:
     - dns
       - dnsrecon/
         - {DNSNAME}-{HOST}-dnsrecon.txt -> Zone transfer attack
+    - documentation
+      - {IP}.md -> template with some information inside to make the documentation
+      - evidences
+        - {IP} -> Folder to add the evidences of all the IPs attacked
     
 ## To-Do:
+  - Add URLs status files from wfuzz directly on documentation (200, 401, 403, 503 in order to don't forget to check anything)
   - Include on vulnerability scan the "OPENVAS scan"
   - Include on web scan the URL and domains catching from http URLs found by wfuzz
   - Include a new scan type that is OSINT, that can execute some get information from web or from diferent script executions.
@@ -128,11 +143,14 @@ To use on network/IP as eg.:
   - smbmap
   - enum4linux
   - crackmapexec
+  - dnsrecon
+  - host
+  - dig
 
 ## Additional Informaiton
   - Deleted interlace dependency as nmap can perform paralelization and it is quicker when we are scanning only 1 IP (When scanning multiple, the difference is low)
   - The UDP nmap is only to 100 top ports, if you have time, perform an additional nmap with full UDP ports in background.
   - The TCP nmap is checking some ports to know if the host is UP and scan it if it is UP, if you have time, perform an additional nmap with full TCP ports with -Pn in background.
   - Aquatone can fail checking http/s ports on nmap (I'm not sure why, but recheck the services to check if there is any possible http port/service missing on the scan and scan it manually)
-  - I saw few times that wfuzz blocks the script, i need to test it more but maybe we will change wfuzz to other path fuzzing. (I like wfuzz but fuff is good too)
-  - We use eyewitness because on the http report, it groups the different screenshots by category.
+  - I saw few times that wfuzz blocks the script, i need to test it more but maybe we will change wfuzz to other path fuzzing app. (I like wfuzz but fuff is good too)
+  - We use eyewitness because it groups the different screenshots by category on the http report.
