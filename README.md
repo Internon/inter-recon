@@ -7,9 +7,12 @@ There is a possibility to skip some checks, to restart them and/or to continue w
 
 Remember if you copy or link the inter-recon script to bin path (ex: /usr/bin/) you can execute the script from where you want. It will create the output where you are.
 
-To use multiple known domain/IPs:
-- Create file domains.txt
-- Execute: inter-recon -T {target file path to use} -d {Directory full path to work on} -w {dictionary full path} -s {scan type} -a; done
+To use multiple known domain/IPs as eg.:
+- Create file domains.txt with all domains or different IPs
+- Execute: inter-recon -T $(pwd)/domains.txt -d $(pwd)/known-domains -w /home/kali/Desktop/tools/inter-recon/dictionaries/without-slash/dict-small-without-slash.txt  -s all -a true
+
+To use on network/IP as eg.:
+- Execute: inter-recon -t 10.11.1.1/24 -w /home/kali/Desktop/tools/inter-recon/dictionaries/without-slash/dict-small-without-slash.txt -s all -a true
 
 ## How to use:
   inter-recon.sh [OPTIONS]
@@ -19,6 +22,33 @@ To use multiple known domain/IPs:
 		-w {DICT PATH}
 		-s {scan type}
 		-a optional is for superautomaticscan skipping all and not asking anything on wfuzz process at fisrt time execution
+
+## Scan types
+  - all
+    - portscan
+      - nmap TCP -> full ports checking host up if they have one of the following ports open (22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002)
+      - nmap UDP -> top 100 ports with default host up process 
+    - vulnscan
+      - parse nmap UDP and TCP scan to files
+      - parse nmap UDP and TCP scan on services folder by service
+      - nmap UDP and TCP to open ports executing port/version related scripts
+      - smbmap guest execution -> To check if without user we can write/read anything
+      - enum4linux guest execution -> To check information retrieved from samba
+      - smbversion execution -> To retrieve the version of samba (Sometimes in linux servers is the only way to see the samba version)
+    - webscan
+      - http discovery with aquatone from nmap execution
+      - fuzzing discovered URLs with wfuzz
+      - screenshot Status 200 URLs from fuzzing with eyewitness
+      - 403 bypass techniques with byp4xx
+    - following steps -> quick explanation of things to do after script execution
+  - vuln
+    - portscan (Same as above)
+    - vulnscan (Same as above)
+    - following steps (Same as above)
+  - web
+    - portscan (Same as above)
+    - webscan (Same as above)
+    - following steps (Same as above)
 
 ## Structure:
   - First ports scan tcp and udp with version (nmap, requires sudo)
@@ -71,9 +101,17 @@ To use multiple known domain/IPs:
       - byp4xx-{URL without : and /}.txt -> byp4xx output of each 403 URL
     - all-urls-fuzzing-results.txt -> File with all URL fuzzing scan with format "urlStatus URL"
     - full-nmap-parsed-tcp.txt -> Nmap parsed with format "IP,Port,Service,Version"
+    - smb/
+      - smbmap/
+        - {HOST}-smbmap.txt -> Guest samba folder permissions smbmap execution
+      - enum4linux/
+        - {HOST}-enum4linux.txt -> Guest information recoverable
+      - smbversion/{HOST}-smbversion.txt -> Version of samba (Useful because nmap and other tools sometimes don't know the true version)
+    - dns
+      - dnsrecon/
+        - {DNSNAME}-{HOST}-dnsrecon.txt -> Zone transfer attack
     
 ## To-Do:
-  - Add enum4linux and smbmap
   - Include on vulnerability scan the "OPENVAS scan"
   - Include on web scan the URL and domains catching from http URLs found by wfuzz
   - Include a new scan type that is OSINT, that can execute some get information from web or from diferent script executions.
@@ -87,6 +125,9 @@ To use multiple known domain/IPs:
     - Arch-Linux) sudo pacman -S eyewitness
   - Nmap-vulners: https://github.com/vulnersCom/nmap-vulners
   - byp4xx: https://github.com/lobuhi/byp4xx/
+  - smbmap
+  - enum4linux
+  - crackmapexec
 
 ## Additional Informaiton
   - Deleted interlace dependency as nmap can perform paralelization and it is quicker when we are scanning only 1 IP (When scanning multiple, the difference is low)

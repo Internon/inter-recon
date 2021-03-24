@@ -16,6 +16,9 @@ function initvariables(){
 	INTERAUXFOLDER=$INTERINITFOLDER/aux
 	INTERSERVICESFOLDER=$INTERINITFOLDER/services
 	INTERBYP4XXFOLDER=$INTERINITFOLDER/bypass
+	INTERSMBFOLDER=$INTERINITFOLDER/smb
+	INTERDNSFOLDER=$INTERINITFOLDER/dns
+	INTERDOCUFOLDER=$INTERINITFOLDER/documentation
 	INTERFUZZFILTER="not (c=BBB and l=BBB and w=BBB)"
 }
 
@@ -218,8 +221,8 @@ function servicesparsing() {
 	uniqueservicesudp=$(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | tr -d '?' | sed 's/|/-/g' | sort -u)
         for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/[a-z]*\/udp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-udp.txt ; done
 	#for i in $(ls $INTERNMAPFOLDER/); do portsandservices=$(cat $INTERNMAPFOLDER/$i | grep 'service name=\"' | sed 's/.*portid="//g' | sed 's/".*service name=\"/,/g' | sed 's/" product="/,/g' | sed 's/" version="/,version /g' | sed 's/" extrainfo="/ /g'  | sed 's/" method="/,method /g' | sed 's/" conf="/,conf /g' | sed 's/".*//g'); uniqueservices=$(echo "$portsandservices" | awk -F ',' '{print $2}' | awk -F' ' '{print $1}' | sort -u); for service in $(echo "$uniqueservices"); do echo "$portsandservices" | grep ",$service$\|,$service," | awk -F ',' -v ip=$(echo $i | sed 's/.xml//g') '{print ip","$1","$2","$3","$4","$5}' >> $INTERSERVICESFOLDER/$service-service.txt; done ;done
-	for servicetcp in $(echo $uniqueservicestcp); do cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $servicetcp >> $INTERSERVICESFOLDER/tcp-$servicetcp-service.txt; done
-	for serviceudp in $(echo $uniqueservicesudp); do cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $serviceudp >> $INTERSERVICESFOLDER/udp-$serviceudp-service.txt; done
+	for servicetcp in $(echo $uniqueservicestcp); do cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $servicetcp >> $INTERSERVICESFOLDER/tcp-$(echo $servicetcp | sed 's/|/-/g')-service.txt; done
+	for serviceudp in $(echo $uniqueservicesudp); do cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $serviceudp >> $INTERSERVICESFOLDER/udp-$(echo $serviceudp | sed 's/|/-/g')-service.txt; done
 	echo "Review services output in $INTERSERVICESFOLDER folder"
 	endservicesparsingprocess=`date +%s`
 	echo -e "\e[32m--------- Ended services parsing process\e[0m"
@@ -243,13 +246,121 @@ function cvescan() {
 	displaytime `expr $endcveprocess - $startcveprocess`
 	echo "Execution time of cve recon process was$timecalc."
 }
+function smbversion() {
+	rhost=$1
+	sudo tcpdump -s0 -n -i tun0 src $rhost and port 139 -A -c 10 2>/dev/null | grep -i "samba\|s.a.m\|pipe" | sed 's/\.\.\./\-/g' | tr -d '.' | sed 's/\([0-9]\)\-/\1\./g' | sed 's/\([0-9]\)\.\([a-zA-Z]\)/\1\-\2/g' | sed 's/\-/ /g' | sed 's/  /\n/g' | sed 's/^[ ]*//g' | sort -u & echo -n "$rhost: " &
+	echo "exit" | smbclient -L $rhost 1>/dev/null 2>/dev/null
+	echo "" && sleep 2
+}
+function smbscan() {
+	echo -e "\e[32m--------- Starting samba scan process\e[0m"
+	echo "This is to retrieve samba related version and information (sudo needed for tcpdump)"
+	startsmbprocess=`date +%s`
+	smb139hosts=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep ",139," | awk -F',' '{print $1}' | sort -u)
+	smb445hosts=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep ",445," | awk -F',' '{print $1}' | sort -u)
+	if [[ "$smb139hosts" != "" ]]; then
+		for smb139host in $(echo $smb139hosts); do smbversion $smb139host > $INTERSMBFOLDER/smbversion/$smb139host-smbversion.txt ; done &> $INTERDEBUGFOLDER/smb-139-output.txt
+	fi
+	if [[ "$smb445hosts" != "" ]]; then
+		for smb445host in $(echo $smb445hosts); do smbmap -u '' -p '' -H $smb445host > $INTERSMBFOLDER/smbmap/$smb445host-smbmap.txt ; enum4linux -U -S -G -P -o -n -i -l $smb445host > $INTERSMBFOLDER/enum4linux/$smb445host-enum4linux.txt ; done &> $INTERDEBUGFOLDER/smb-445-output.txt
+	fi
+	endsmbprocess=`date +%s`
+	echo -e "\e[32m--------- Ended smb scan process\e[0m"
+	displaytime `expr $endsmbprocess - $startsmbprocess`
+	echo "Execution time of smb recon process was$timecalc."
+}
+
+function dnsscan() {
+	echo -e "\e[32m--------- Starting dns scan process\e[0m"
+	echo "This is to retrieve dns related version and information"
+	startdnsprocess=`date +%s`
+	dnshosts=$(cat $INTERSERVICESFOLDER/*-service.txt | grep ",53," | awk -F',' '{print $1}' | sort -u)
+	cd $INTERINITFOLDER 
+	if [[ "$dnshosts" != "" ]]; then
+		for dnshost in $(echo $dnshosts)
+		do 
+			smb445hosts=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $dnshost | grep ",445," | awk -F',' '{print $1}' | sort -u)
+			ldap389=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $dnshost | grep ",389," | awk -F',' '{print $1}' | sort -u)
+			dnsnames=$(echo $(dig -x $dnshost @$dnshost | grep PTR | awk -F 'PTR' '{print $2}' | tr -d '     ' | sed 's/\.$//g' | grep [a-zA-Z0-9])","$(host $dnshost | grep -v "not found" | awk -F ' ' '{print $5}' | sed 's/\.$//g' | grep [a-zA-Z0-9]))
+			if [[ "$smb445hosts" != "" ]]; then 
+				dnsnames=$(echo $(crackmapexec smb $dnshost | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $dnshost | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsname)
+			fi
+			if [[ "$ldap389" != "" ]]; then
+                                dnsnames=$(echo $(crackmapexec smb $dnshost | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $dnshost | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
+			fi
+			dnsnames=$(echo $dnsnames | sed 's/,/\n/g' | grep [a-zA-Z0-9] | grep -v "NXDOMAIN" | sort -u)
+			if [[ "$dnsnames" != "" ]]; then
+				for dnsname in $dnsnames
+				do
+					dnsrecon -d $dnsname -t axfr -n $dnshost > $INTERDNSFOLDER/dnsrecon/$dnshost-$dnsname-dnsrecon.txt
+				done &> $INTERDEBUGFOLDER/dnsrecon-output.txt
+			fi
+		done
+	fi
+	cd ..
+	enddnsprocess=`date +%s`
+	echo -e "\e[32m--------- Ended dns scan process\e[0m"
+        displaytime `expr $enddnsprocess - $startdnsprocess`
+	echo "Execution time of dns recon process was$timecalc."
+}
+
+function makedocu() {
+	echo -e "\e[32m--------- Making documentation files"
+	if [[ ! -d $INTERDOCUFOLDER ]]; then
+		mkdir $INTERDOCUFOLDER
+	else
+		echo "Documentation folder exist"
+	fi
+	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
+	for host in $hosts; do
+		if [[ ! -d $INTERDOCUFOLDER/evidences/ ]]; then
+			mkdir $INTERDOCUFOLDER/evidences/
+			if [[ ! -d $INTERDOCUFOLDER/evidences/$host ]]; then
+	                        mkdir $INTERDOCUFOLDER/evidences/$host
+			else
+				echo "Evidence host folder exist"
+			fi
+		else
+			echo "Evidence folder exist"
+		fi
+		echo -e '###'$host'\n
+##Credentials\n
+##Ports open\n
+> TCP\n' >> $INTERDOCUFOLDER/$host.md
+		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
+			cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt >> $INTERDOCUFOLDER/$host.md
+		fi
+		echo -e '\n
+> UDP\n' >> $INTERDOCUFOLDER/$host.md
+		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
+			cat $INTERINITFOLDER/full-nmap-parsed-udp.txt >> $INTERDOCUFOLDER/$host.md
+		fi
+		echo -e '\n
+##Gaining access\n' >> $INTERDOCUFOLDER/$host.md
+		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
+			cat $INTERSERVICESFOLDER/*-service.txt | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$host.md
+		fi
+		echo -e '\n
+##Privesc\n
+##Postexplotation\n
+> Local Hashes\ncat /etc/shadow or cat /etc/passwd\nSAM dump + lsa\n
+> Users folder\nls -lahR /home\n
+> Netstat\nnetstat -anopl\nnetstat -anobl\n
+> Network interfaces\nifconfig\nipconfig\n
+> SSH keys\nfind / | grep "\.ssh/"\n
+> Database information\n
+> Browser information if GUI\n
+> Credentials on files/proofs.txt\n
+' >> $INTERDOCUFOLDER/$host.md
+	done
+}
 
 function vulnscan() {
 	echo -e "\e[35mStarting vulnerability scan and service parsing processes\e[0m"
 	echo "We are going to parse the services and execute nmap vulners and openvas to those services to retrieve vulnerabilities"
 	startvulnprocess=`date +%s`
 	if [ ! -d "$INTERNMAPFOLDER" ]; then
-		echo -e "\e[33m[WARNING] - NMAP folder $INTERSERVICESFOLDER doesn't exist, we will execute first a portscan to get NMAP.\e[0m"
+		echo -e "\e[33m[WARNING] - NMAP folder $INTERNMAPFOLDER doesn't exist, we will execute first a portscan to get NMAP.\e[0m"
 		mkdir $INTERNMAPFOLDER
 		portscan
 	fi
@@ -277,22 +388,72 @@ function vulnscan() {
 		mkdir $INTERSERVICESFOLDER
 		servicesparsing
 	fi
-	if [ -d "$INTERCVEFOLDER" ]; then
-		echo -e "\e[33m[WARNING] - CVE scan folder $INTERCVEFOLDER exist.\e[0m"
-		echo -e "\e[96mDo you want to skip cvescan? ([y] default/[n]):\e[0m"
-		read skipcvescan
-		if [ "$skipcvescan" == "n" ]; then
-			echo "Restarting from cve scan"
-			rm -rf $INTERCVEFOLDER
-			mkdir $INTERCVEFOLDER
-			cvescan
+	if [[ "$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep ",445,\|,139,")" != "" ]]; then
+		if [ -d "$INTERSMBFOLDER" ]; then
+                	echo -e "\e[33m[WARNING] - SMB scan folder $INTERSMBFOLDER exist.\e[0m"
+                	echo -e "\e[96mDo you want to skip smbscan? ([y] default/[n]):\e[0m"
+                	read skipsmbscan
+                	if [ "$skipsmbscan" == "n" ]; then
+                        	echo "Restarting from smb scan"
+                        	rm -rf $INTERSMBFOLDER
+				mkdir $INTERSMBFOLDER
+				mkdir $INTERSMBFOLDER/smbmap
+				mkdir $INTERSMBFOLDER/smbversion
+				mkdir $INTERSMBFOLDER/enum4linux
+				smbscan
+			else
+				echo "Skipping smb scan"
+			fi
 		else
-			echo "Skipping cve scan"
+			mkdir $INTERSMBFOLDER
+			mkdir $INTERSMBFOLDER/smbmap
+                	mkdir $INTERSMBFOLDER/smbversion
+                	mkdir $INTERSMBFOLDER/enum4linux
+			smbscan
 		fi
-	else
-		mkdir $INTERCVEFOLDER
-		cvescan
+	else 
+		echo -e "\e[33m[WARNING] - No port 445,139 found in nmap scan process.\e[0m"
+                echo "Skipping processes dependents of default SMB ports"
 	fi
+	if [[ "$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep ",53,")" != "" ]]; then
+		if [ -d "$INTERDNSFOLDER" ]; then
+                        echo -e "\e[33m[WARNING] - DNS san folder $INTERDNSFOLDER exist.\e[0m"
+                        echo -e "\e[96mDo you want to skip dnsscan? ([y] default/[n]):\e[0m"
+                        read skipdnsscan
+                        if [ "$skipdnsscan" == "n" ]; then
+                                echo "Restarting from dns scan"
+                                rm -rf $INTERDNSFOLDER
+                                mkdir $INTERDNSFOLDER
+				mkdir $INTERDNSFOLDER/dnsrecon
+				dnsscan
+			else
+				echo "Skipping dns scan"
+			fi
+		else
+			mkdir $INTERDNSFOLDER
+                        mkdir $INTERDNSFOLDER/dnsrecon
+			dnsscan
+		fi		
+	else
+		echo -e "\e[33m[WARNING] - No port 53 found in nmap scan process.\e[0m"
+		echo "Skipping processes dependents of default DNS ports"
+	fi
+	if [ -d "$INTERCVEFOLDER" ]; then
+                echo -e "\e[33m[WARNING] - CVE scan folder $INTERCVEFOLDER exist.\e[0m"
+                echo -e "\e[96mDo you want to skip cvescan? ([y] default/[n]):\e[0m"
+                read skipcvescan
+                if [ "$skipcvescan" == "n" ]; then
+                        echo "Restarting from cve scan"
+                        rm -rf $INTERCVEFOLDER
+                        mkdir $INTERCVEFOLDER
+                        cvescan
+                else
+                        echo "Skipping cve scan"
+                fi
+        else
+                mkdir $INTERCVEFOLDER
+                cvescan
+        fi
 	endvulnprocess=`date +%s`
 	echo -e "\e[35mEnded vulnscan processes\e[0m"
 	displaytime `expr $endvulnprocess - $startvulnprocess`
@@ -425,13 +586,15 @@ function scanall() {
 
 function followingsteps() {
 	echo '[INFO EXTRA] - Remember to check the following things depending of your scan:'
-	echo '   1 - (VULNSCAN) The services folder (Check vulnerable versions in searchsploit and google)'
-	echo '   2 - (VULNSCAN) The cve folder (Check known exploits from nmap scripts)'
-	echo '   3 - (VULNSCAN) Check services that you don"t know the version on nmap using netcat (Sometimes the version can"t be retrieved with nmap)'
-	echo '   4 - (WEBSCAN) The screenshot folder (Check the different http services)'
-        echo '   5 - (WEBSCAN) The files with name url-status-{200,401,403,etc}.txt (We only perform status 200 screenshot and on other status maybe there is something new)'
-	echo '   6 - (WEBSCAN) Fuzz paths in url-status-*.txt files (You can see other services/files inside first path with information)'
-	echo '   7 - (WEBSCAN) Try bruteforce credentials on some login pages (Check status 200, 401, 403)'
+	echo '   - (VULNSCAN) The services folder (Check vulnerable versions in searchsploit and google)'
+	echo '   - (VULNSCAN) The cve folder (Check known exploits from nmap scripts)'
+	echo '   - (VULNSCAN) The smb folder (Check smbmap guest execution file, smbversion execution file and enum4linux execution file)'
+	echo '   - (VULNSCAN) Check services that you don"t know the version on nmap using netcat or other way (Sometimes the version can"t be retrieved with nmap)'
+	echo '   - (VULNSCAN) If you have a known user, execute smbmap and enum4linux with -u {user} -p {password}'
+	echo '   - (WEBSCAN) The screenshot folder (Check the different http services)'
+        echo '   - (WEBSCAN) The files with name url-status-{200,401,403,etc}.txt (We only perform status 200 screenshot and on other status maybe there is something new)'
+	echo '   - (WEBSCAN) Fuzz paths in url-status-*.txt files (You can see other services/files inside first path with information)'
+	echo '   - (WEBSCAN) Try bruteforce credentials on some login pages (Check status 200, 401, 403)'
 	echo '============================================================================'
 }
 while getopts "hd:T:t:w:s:a" OPTION
@@ -497,16 +660,19 @@ if ([[ ! -z $INTERTARGET ]] && [[ !  -z $INTERDICT ]] && [[ !  -z $INTERSCANTYPE
 	case $INTERSCANTYPE in
 		all)
 			scanall
+			makedocu
 			followingsteps
 			exit 1
 			;;
 		web)
 			webscan
+			makedocu
 			followingsteps
 			exit 1
 			;;
 		vuln)
 			vulnscan
+			makedocu
 			followingsteps
 			exit 1
 			;;
