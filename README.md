@@ -7,6 +7,8 @@ There is a possibility to skip some checks, to restart them and/or to continue w
 
 Remember if you copy or link the inter-recon script to bin path (ex: /usr/bin/) you can execute the script from where you want. It will create the output where you are.
 
+IMPORTANT TO SEE WFUZZ PROBLEM AND WORKAROUND ON THE END OF THE README (Additional information section)
+
 To use multiple known domain/IPs as eg.:
 - Create file domains.txt with all domains or different IPs
 - Execute: inter-recon -T $(pwd)/domains.txt -d $(pwd)/known-domains -w /home/kali/Desktop/tools/inter-recon/dictionaries/without-slash/dict-small-without-slash.txt  -s all -a true
@@ -152,5 +154,5 @@ To use on network/IP as eg.:
   - The UDP nmap is only to 100 top ports, if you have time, perform an additional nmap with full UDP ports in background.
   - The TCP nmap is checking some ports to know if the host is UP and scan it if it is UP, if you have time, perform an additional nmap with full TCP ports with -Pn in background.
   - Aquatone can fail checking http/s ports on nmap (I'm not sure why, but recheck the services to check if there is any possible http port/service missing on the scan and scan it manually)
-  - I saw few times that wfuzz blocks the script, i need to test it more but maybe we will change wfuzz to other path fuzzing app. (I like wfuzz but fuff is good too)
+  - I saw few times that wfuzz blocks the script, i have seen that wfuzz have a problem with a deadlock when there is a error on the URLs. A workaround of this meanwhile they solve the issue, is to comment the th.join() and add a pass on the file /usr/local/lib/python3.9/dist-packages/wfuzz/myhttp.py on the function "Cleanup"
   - We use eyewitness because it groups the different screenshots by category on the http report.
