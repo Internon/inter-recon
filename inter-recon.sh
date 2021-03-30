@@ -77,7 +77,7 @@ function portscan() {
 	fi
 	#startinterlaceprocess=`date +%s`
 	sudo nmap -sSV -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX $INTERNMAPFOLDER/nmap-tcp-target.xml -oG $INTERNMAPFOLDER/nmap-tcp-target.gnmap --open -p- -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-tcp-output.txt
-	sudo nmap -sUV -T4 -F --max-retries 3 --min-parallelism 100 --host-timeout 5m --version-intensity 0 -oX $INTERNMAPFOLDER/nmap-udp-target.xml -oG $INTERNMAPFOLDER/nmap-udp-target.gnmap --open -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-udp-output.txt
+	sudo nmap -sUV -F --min-parallelism 100 --host-timeout 5m --version-intensity 0 -oX $INTERNMAPFOLDER/nmap-udp-target.xml -oG $INTERNMAPFOLDER/nmap-udp-target.gnmap --open -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-udp-output.txt
 	#sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 100 -c "nmap -sSV -T4 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX - --open -p- _target_ > $INTERNMAPFOLDER/_target_.xml" &> $INTERDEBUGFOLDER/interlace-output.txt
 	#endinterlaceprocess=`date +%s`
 	echo -e "\e[32m--------- Ended port scan process\e[0m"
@@ -175,7 +175,7 @@ function fuzzingscan() {
 			for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --efield url -t 40 --filter "$INTERFUZZFILTER" -w $INTERDICT --zE urlencode -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo -e "\e[96mDo you want to skip this URL and continue? ([y] default/[n]):\e[0m"; read skipURL ; if [ "$skipURL" == "n" ]; then echo "We will stop the process here. To continue with the process, execute again the script, it will make fuzzing to the files not processed yet."; exit 1; else echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt;  fi ; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ; sleep 10 ;done
 		fi
 	else
-		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --conn-delay 10 --req-delay 10 --efield url -t 40 --filter "$INTERFUZZFILTER" -w $INTERDICT --zE urlencode -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ; sleep 10 ;done
+		for i in $(cat $INTERAUXFOLDER/aquatone-full-initial-files.txt); do wfuzz --conn-delay 10 --req-delay 10 --efield url -t 40 --filter "$INTERFUZZFILTER" -w $INTERDICT --zE urlencode -f $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt -L $i"FUZZ{asdfnottherexxxasdf}" &>> $INTERDEBUGFOLDER/wfuzz-output.txt ; totalreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Total requests:" | awk -F":" '{print $2}' | sed 's/^ //g'); processedreq=$(cat  $INTERFUZZINGFOLDER/$(echo $i | sed 's/\//-/g' | sed 's/:/-/g').txt| grep "Processed Requests:" | awk -F":" '{print $2}' | sed 's/^ //g');if [[ `expr $(expr $totalreq + 1) - $processedreq` -gt 0  ]]; then echo -e "\e[33m[WARNING] - Found an error in $i URL. Review debug folder to see the error\e[0m"; echo "[INFO] - Skipping $i"; echo $i >> $INTERAUXFOLDER/wfuzz-skipped-urls.txt; fi; sed -i "/$(echo $i| sed 's/https*:\/\///g' | sed 's/\/$//g')/d" $INTERAUXFOLDER/aquatone-full-initial-files.txt ; done
 		echo "Skipped URLs in $INTERAUXFOLDER/wfuzz-skipped-urls.txt"
 	fi
 
@@ -240,7 +240,7 @@ function cvescan() {
 	startcveprocess=`date +%s`
 	#sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 20 -c " if [[ \"\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g')\" != \"\" ]]; then nmap -sSV --script vulners --script-args=mincvss=$mincvss -T4 -Pn --open -p\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g') _target_ -oN $INTERCVEFOLDER/_target_.txt ; fi" &> $INTERDEBUGFOLDER/interlace-cve-output.txt
 	for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/tcp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sSV -A -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/tcp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-tcp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-tcp-cve-output.txt
-	for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sUV -A -T4 -F --max-retries 3 --min-parallelism 100 --host-timeout 5m --version-intensity 0 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-udp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-udp-cve-output.txt
+	for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sUV -A -F --min-parallelism 100 --host-timeout 5m --version-intensity 0 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-udp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-udp-cve-output.txt
 	endcveprocess=`date +%s`
 	echo -e "\e[32m--------- Ended cve scan process\e[0m"
 	displaytime `expr $endcveprocess - $startcveprocess`
@@ -312,33 +312,33 @@ function makedocu() {
 		echo "Documentation folder exist"
 	fi
 	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
+	if [[ ! -d $INTERDOCUFOLDER/evidences/ ]]; then
+		mkdir $INTERDOCUFOLDER/evidences/
+	else
+		echo "Evidence folder exist"
+	fi
 	for host in $hosts; do
-		if [[ ! -d $INTERDOCUFOLDER/evidences/ ]]; then
-			mkdir $INTERDOCUFOLDER/evidences/
-			if [[ ! -d $INTERDOCUFOLDER/evidences/$host ]]; then
-	                        mkdir $INTERDOCUFOLDER/evidences/$host
-			else
-				echo "Evidence host folder exist"
-			fi
+		if [[ ! -d $INTERDOCUFOLDER/evidences/$host ]]; then
+	        	mkdir $INTERDOCUFOLDER/evidences/$host
 		else
-			echo "Evidence folder exist"
+			echo "Evidence host folder exist"
 		fi
 		echo -e '###'$host'\n
 ##Credentials\n
 ##Ports open\n
 > TCP\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt >> $INTERDOCUFOLDER/$host.md
+			cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
 		fi
 		echo -e '\n
 > UDP\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERINITFOLDER/full-nmap-parsed-udp.txt >> $INTERDOCUFOLDER/$host.md
+			cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
 		fi
 		echo -e '\n
 ##Gaining access\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERSERVICESFOLDER/*-service.txt | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$host.md
+			cat $INTERSERVICESFOLDER/*-service.txt | grep $host | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$host.md
 		fi
 		echo -e '\n
 ##Privesc\n
