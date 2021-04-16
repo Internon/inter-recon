@@ -328,12 +328,21 @@ function makedocu() {
 ##Ports open\n
 > TCP\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+			if [[ -f $INTERINITFOLDER/full-nmap-parsed-tcp.txt ]]; then
+
+			        cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+			else
+				echo "No TCP ports found on host $host"
+			fi
 		fi
 		echo -e '\n
 > UDP\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+			if [[ -f $INTERINITFOLDER/full-nmap-parsed-udp.txt ]]; then
+				cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+			else
+				echo "No UDP ports found on host $host"
+			fi
 		fi
 		echo -e '\n
 ##Gaining access\n' >> $INTERDOCUFOLDER/$host.md
