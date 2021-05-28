@@ -216,13 +216,12 @@ function servicesparsing() {
 	echo -e "\e[32m--------- Starting services parsing process\e[0m"
 	echo "This is to parse the services found by nmap and make readable output"
 	startservicesparsingprocess=`date +%s`
-	uniqueservicestcp=$(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | tr -d '?' | sort -u)
+	uniqueservicestcp=$(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | sort -u)
 	for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/open\/tcp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-tcp.txt ; done
-	uniqueservicesudp=$(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | tr -d '?' | sed 's/|/-/g' | sort -u)
+	uniqueservicesudp=$(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | sort -u)
         for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/[a-z]*\/udp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-udp.txt ; done
-	#for i in $(ls $INTERNMAPFOLDER/); do portsandservices=$(cat $INTERNMAPFOLDER/$i | grep 'service name=\"' | sed 's/.*portid="//g' | sed 's/".*service name=\"/,/g' | sed 's/" product="/,/g' | sed 's/" version="/,version /g' | sed 's/" extrainfo="/ /g'  | sed 's/" method="/,method /g' | sed 's/" conf="/,conf /g' | sed 's/".*//g'); uniqueservices=$(echo "$portsandservices" | awk -F ',' '{print $2}' | awk -F' ' '{print $1}' | sort -u); for service in $(echo "$uniqueservices"); do echo "$portsandservices" | grep ",$service$\|,$service," | awk -F ',' -v ip=$(echo $i | sed 's/.xml//g') '{print ip","$1","$2","$3","$4","$5}' >> $INTERSERVICESFOLDER/$service-service.txt; done ;done
-	for servicetcp in $(echo $uniqueservicestcp); do cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep ",$servicetcp," >> $INTERSERVICESFOLDER/tcp-$(echo $servicetcp | sed 's/|/-/g')-service.txt; done
-	for serviceudp in $(echo $uniqueservicesudp); do cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep ",$serviceudp," >> $INTERSERVICESFOLDER/udp-$(echo $serviceudp | sed 's/|/-/g')-service.txt; done
+	for servicetcp in $(echo $uniqueservicestcp); do cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep ",$servicetcp," >> $INTERSERVICESFOLDER/tcp-$(echo $servicetcp | tr -d '?' | sed 's/|/-/g')-service.txt; done
+	for serviceudp in $(echo $uniqueservicesudp); do cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep ",$serviceudp," >> $INTERSERVICESFOLDER/udp-$(echo $serviceudp | tr -d '?' | sed 's/|/-/g')-service.txt; done
 	echo "Review services output in $INTERSERVICESFOLDER folder"
 	endservicesparsingprocess=`date +%s`
 	echo -e "\e[32m--------- Ended services parsing process\e[0m"
@@ -238,9 +237,10 @@ function cvescan() {
 	#read mincvss
 	#mincvss=${mincvss:-5.0}
 	startcveprocess=`date +%s`
-	#sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 20 -c " if [[ \"\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g')\" != \"\" ]]; then nmap -sSV --script vulners --script-args=mincvss=$mincvss -T4 -Pn --open -p\$(grep \"_target_,\" $INTERSERVICESFOLDER/* -h | awk -F ',' '{print \$2}' | tr '\n' ',' | sed 's/,\$//g') _target_ -oN $INTERCVEFOLDER/_target_.txt ; fi" &> $INTERDEBUGFOLDER/interlace-cve-output.txt
-	for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/tcp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sSV -A -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/tcp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-tcp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-tcp-cve-output.txt
-	for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sUV -A -F --min-parallelism 100 --host-timeout 5m --version-intensity 0 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-udp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-udp-cve-output.txt
+	echo "Commented for OSCP"
+	#Commented for OSCP
+	#for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/tcp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sSV -A -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/tcp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-tcp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-tcp-cve-output.txt
+	#for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do if [[ "$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g')" != "" ]]; then sudo nmap -sUV -A -F --min-parallelism 100 --host-timeout 5m --version-intensity 0 -Pn --open -p$(grep "$host," $INTERSERVICESFOLDER/udp* -h | awk -F ',' '{print $2}' | tr '\n' ',' | sed 's/,$//g') $host -oN $INTERCVEFOLDER/$host-udp-scripts-nmap.txt; fi; done &> $INTERDEBUGFOLDER/nmap-udp-cve-output.txt
 	endcveprocess=`date +%s`
 	echo -e "\e[32m--------- Ended cve scan process\e[0m"
 	displaytime `expr $endcveprocess - $startcveprocess`
@@ -323,35 +323,41 @@ function makedocu() {
 		else
 			echo "Evidence host folder exist"
 		fi
-		echo -e '###'$host'\n
-##Credentials\n
-##Ports open\n
+		echo -e '# '$host'\n
+## Credentials\n
+## Ports open\n
 > TCP\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+			if [[ -f $INTERINITFOLDER/full-nmap-parsed-tcp.txt ]]; then
+				cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+				echo -e '
+'
+			fi
 		fi
-		echo -e '\n
-> UDP\n' >> $INTERDOCUFOLDER/$host.md
+		echo -e '> UDP\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+			if [[ -f $INTERINITFOLDER/full-nmap-parsed-udp.txt ]]; then
+				cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+				echo -e '
+'
+			fi
 		fi
-		echo -e '\n
-##Gaining access\n' >> $INTERDOCUFOLDER/$host.md
+		echo -e '## Gaining access\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
 			cat $INTERSERVICESFOLDER/*-service.txt | grep $host | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$host.md
+			echo -e '
+'
 		fi
-		echo -e '\n
-##Privesc\n
-##Postexplotation\n
-> Local Hashes\ncat /etc/shadow or cat /etc/passwd\nSAM dump + lsa\n
-> Users folder\nls -lahR /home\n
-> Netstat\nnetstat -anopl\nnetstat -anobl\n
-> Network interfaces\nifconfig\nipconfig\n
-> SSH keys\nfind / | grep "\.ssh/"\n
-> Database information\n
-> Browser information if GUI\n
-> Credentials on files/proofs.txt\n
-' >> $INTERDOCUFOLDER/$host.md
+		echo -e '## Privesc\n
+## Postexplotation\n
+- Local Hashes\ncat /etc/shadow or cat /etc/passwd\nSAM dump + lsa\n
+- Users folder\nls -lahR /home\n
+- Netstat\nnetstat -anopl\nnetstat -anobl\n
+- Network interfaces\nifconfig\nipconfig\n
+- SSH keys\nfind / | grep "\.ssh/"\n
+- Database information\n
+- Browser information if GUI\n
+- Credentials on files/proofs.txt' >> $INTERDOCUFOLDER/$host.md
 	done
 }
 
