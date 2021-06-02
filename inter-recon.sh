@@ -57,8 +57,8 @@ function scripthelp(){
         echo "	 	-s {all/web/vuln}"
         echo "		-a superautomaticscan"
 	echo "	Examples:"
-	echo "		inter-recon -t 127.0.0.1 -w \$(pwd)/dict.txt -s all -a"
-	echo "		inter-recon -T targets.txt -d \$(pwd)/domains -w \$(pwd)/dict.txt -s all -a"
+	echo "		inter-recon -t 127.0.0.1 -w \$(pwd)/dict.txt -s all -a true"
+	echo "		inter-recon -T targets.txt -d \$(pwd)/domains -w \$(pwd)/dict.txt -s all -a true"
 	echo "[INFO] - '-w' (I recommend you that if you have a lot of web services and low time use the /dictionaries/common.txt at least to start)"
 	echo "[INFO] - '-a' is for super automatic scan skipping all skipable and not asking anything, just executing all without configuration and neither re-execution of anything"
 	echo "[INFO] - '-d' and '-w' must be a full static path ex: /tmp/recon"
@@ -76,7 +76,7 @@ function portscan() {
 		echo $INTERTARGET > $INTERINITFOLDER/targets.txt
 	fi
 	#startinterlaceprocess=`date +%s`
-	sudo nmap -sSV -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX $INTERNMAPFOLDER/nmap-tcp-target.xml -oG $INTERNMAPFOLDER/nmap-tcp-target.gnmap --open -p- -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-tcp-output.txt
+	sudo nmap -sSV -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002,10443 -oX $INTERNMAPFOLDER/nmap-tcp-target.xml -oG $INTERNMAPFOLDER/nmap-tcp-target.gnmap --open -p- -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-tcp-output.txt
 	sudo nmap -sUV -F --min-parallelism 100 --host-timeout 5m --version-intensity 0 -oX $INTERNMAPFOLDER/nmap-udp-target.xml -oG $INTERNMAPFOLDER/nmap-udp-target.gnmap --open -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-udp-output.txt
 	#sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 100 -c "nmap -sSV -T4 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX - --open -p- _target_ > $INTERNMAPFOLDER/_target_.xml" &> $INTERDEBUGFOLDER/interlace-output.txt
 	#endinterlaceprocess=`date +%s`
@@ -216,13 +216,13 @@ function servicesparsing() {
 	echo -e "\e[32m--------- Starting services parsing process\e[0m"
 	echo "This is to parse the services found by nmap and make readable output"
 	startservicesparsingprocess=`date +%s`
-	uniqueservicestcp=$(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | tr -d '?' | sort -u)
+	uniqueservicestcp=$(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | sort -u)
 	for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/open\/tcp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-tcp.txt ; done
-	uniqueservicesudp=$(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | tr -d '?' | sed 's/|/-/g' | sort -u)
-        for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/[a-z]*\/udp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-udp.txt ; done
+	uniqueservicesudp=$(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | sed 's/|/-/g' | sort -u)
+    for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/[a-z]*\/udp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-udp.txt ; done
 	#for i in $(ls $INTERNMAPFOLDER/); do portsandservices=$(cat $INTERNMAPFOLDER/$i | grep 'service name=\"' | sed 's/.*portid="//g' | sed 's/".*service name=\"/,/g' | sed 's/" product="/,/g' | sed 's/" version="/,version /g' | sed 's/" extrainfo="/ /g'  | sed 's/" method="/,method /g' | sed 's/" conf="/,conf /g' | sed 's/".*//g'); uniqueservices=$(echo "$portsandservices" | awk -F ',' '{print $2}' | awk -F' ' '{print $1}' | sort -u); for service in $(echo "$uniqueservices"); do echo "$portsandservices" | grep ",$service$\|,$service," | awk -F ',' -v ip=$(echo $i | sed 's/.xml//g') '{print ip","$1","$2","$3","$4","$5}' >> $INTERSERVICESFOLDER/$service-service.txt; done ;done
-	for servicetcp in $(echo $uniqueservicestcp); do cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep ",$servicetcp," >> $INTERSERVICESFOLDER/tcp-$(echo $servicetcp | sed 's/|/-/g')-service.txt; done
-	for serviceudp in $(echo $uniqueservicesudp); do cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep ",$serviceudp," >> $INTERSERVICESFOLDER/udp-$(echo $serviceudp | sed 's/|/-/g')-service.txt; done
+	for servicetcp in $(echo $uniqueservicestcp); do cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep ",$servicetcp," >> $INTERSERVICESFOLDER/tcp-$(echo $servicetcp | sed 's/|/-/g' | tr -d '?')-service.txt; done
+	for serviceudp in $(echo $uniqueservicesudp); do cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep ",$serviceudp," >> $INTERSERVICESFOLDER/udp-$(echo $serviceudp | sed 's/|/-/g' | tr -d '?')-service.txt; done
 	echo "Review services output in $INTERSERVICESFOLDER folder"
 	endservicesparsingprocess=`date +%s`
 	echo -e "\e[32m--------- Ended services parsing process\e[0m"
@@ -312,6 +312,10 @@ function makedocu() {
 		echo "Documentation folder exist"
 	fi
 	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
+	if [[ $hosts == "" ]]; then
+		echo '### Target\n
+No open ports found' > $INTERDOCUFOLDER/Target.md
+	fi
 	if [[ ! -d $INTERDOCUFOLDER/evidences/ ]]; then
 		mkdir $INTERDOCUFOLDER/evidences/
 	else
@@ -323,9 +327,16 @@ function makedocu() {
 		else
 			echo "Evidence host folder exist"
 		fi
-		echo -e '###'$host'\n
-##Credentials\n
-##Ports open\n
+		echo -e '### '$host'\n' >> $INTERDOCUFOLDER/$host.md
+		if [[ -f $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt ]]; then
+			echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host.md
+			cat $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt >> $INTERDOCUFOLDER/$host.md
+			echo -e '\nwfuzz --efield url -t 20 --filter "not (c=BBB and l=BBB and w=BBB)" -w {Dictionary path} --zE urlencode -f domain-or-ip-name.txt -L {URL}"FUZZ{asdfnottherexxxasdf}"\n' >> $INTERDOCUFOLDER/$host.md
+		else
+			echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
+		fi
+		echo -e '## Credentials\n
+## Ports open\n
 > TCP\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
 			if [[ -f $INTERINITFOLDER/full-nmap-parsed-tcp.txt ]]; then
@@ -333,6 +344,7 @@ function makedocu() {
 			        cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
 			else
 				echo "No TCP ports found on host $host"
+				echo -e "No TCP ports found on host $host"
 			fi
 		fi
 		echo -e '\n
@@ -342,16 +354,17 @@ function makedocu() {
 				cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
 			else
 				echo "No UDP ports found on host $host"
+				echo -e "No UDP ports found on host $host"
 			fi
 		fi
 		echo -e '\n
-##Gaining access\n' >> $INTERDOCUFOLDER/$host.md
+## Gaining access\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
 			cat $INTERSERVICESFOLDER/*-service.txt | grep $host | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$host.md
 		fi
 		echo -e '\n
-##Privesc\n
-##Postexplotation\n
+## Privesc\n
+## Postexplotation\n
 > Local Hashes\ncat /etc/shadow or cat /etc/passwd\nSAM dump + lsa\n
 > Users folder\nls -lahR /home\n
 > Netstat\nnetstat -anopl\nnetstat -anobl\n
