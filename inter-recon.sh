@@ -11,7 +11,7 @@ function initvariables(){
 	INTERNMAPFOLDER=$INTERINITFOLDER/nmap
 	INTERDISCOVERHTTPFOLDER=$INTERINITFOLDER/http-discover
 	INTERFUZZINGFOLDER=$INTERINITFOLDER/fuzzing
-	INTEREYEWITNESSFOLDER=$INTERINITFOLDER/screenshots
+	INTERSCREENSHOTFOLDER=$INTERINITFOLDER/screenshots
 	INTERCVEFOLDER=$INTERINITFOLDER/cve
 	INTERAUXFOLDER=$INTERINITFOLDER/aux
 	INTERSERVICESFOLDER=$INTERINITFOLDER/services
@@ -190,18 +190,17 @@ function fuzzingscan() {
 }
 
 function screenshotscan() {
-	echo -e "\e[32m--------- Starting eyewitness process\e[0m"
+	echo -e "\e[32m--------- Starting HTTP screenshot process\e[0m"
 	echo "This is to make screenshots of all status 200 URLs found after fuzzing"
-	starteyewitnessprocess=`date +%s`
-	cat $INTERFUZZINGFOLDER/*.txt |grep "C=2" | grep http | awk -F "|" '{print $2}' | grep http | sed 's/^ //g' | sed 's/"//g' | sort -u > $INTERINITFOLDER/eyewitness-200-parsed-urls.txt
+	startscreenshotprocess=`date +%s`
 	cat $INTERFUZZINGFOLDER/*.txt | grep http | sed 's/.* C=//g' | sed 's/ .*|//g' | sed 's/"$//g' | grep -v "^Target: " | sort -u > $INTERINITFOLDER/all-urls-fuzzing-results.txt
 	allstatus=$(cat $INTERINITFOLDER/all-urls-fuzzing-results.txt | awk -F " " '{print $1}' | sort -u)
 	for status in $allstatus; do cat $INTERINITFOLDER/all-urls-fuzzing-results.txt | grep "^$status" | awk -F " " '{print $2}' | sort -u > $INTERINITFOLDER/urls-status-$status.txt ; done
-	eyewitness -f $INTERINITFOLDER/eyewitness-200-parsed-urls.txt --jitter 1 -d $INTEREYEWITNESSFOLDER --timeout 60 --threads 10 --web --max-retries 1 --no-prompt >& $INTERDEBUGFOLDER/eyewitness-output.txt
-	endeyewitnessprocess=`date +%s`
-	echo -e "\e[32m--------- Ended eyewitness process\e[0m"
-	displaytime `expr $endeyewitnessprocess - $starteyewitnessprocess`
-	echo "Execution time of eyewitness process was$timecalc."
+	cat $INTERINITFOLDER/urls-status-200.txt | aquatone -screenshot-timeout 120000 -threads 50 -http-timeout 120000 --scan-timeout 120000 -out $INTERSCREENSHOTFOLDER &> $INTERDEBUGFOLDER/screenshot-output.txt
+	endscreenshotprocess=`date +%s`
+	echo -e "\e[32m--------- Ended HTTP screenshot process\e[0m"
+	displaytime `expr $endscreenshotprocess - $startscreenshotprocess`
+	echo "Execution time of HTTP screenshot process was$timecalc."
 }
 
 function bypass403() {
@@ -536,8 +535,8 @@ function webscan(){
 		else
 			fuzzingscan
 		fi
-		if [ -d "$INTEREYEWITNESSFOLDER" ]; then
-			echo -e "\e[33m[WARNING] - Final screenshot scan folder $INTEREYEWITNESSFOLDER exist.\e[0m"
+		if [ -d "$INTERSCREENSHOTFOLDER" ]; then
+			echo -e "\e[33m[WARNING] - Final screenshot scan folder $INTERSCREENSHOTFOLDER exist.\e[0m"
 			echo -e "\e[96mDo you want to skip screenshotscan? ([y] default/[n]):\e[0m"
 			read skipscreenshotscan
 			if [ "$skipscreenshotscan" == "n" ]; then
@@ -573,7 +572,6 @@ function webscan(){
 		echo -e "\e[33m[WARNING] - No HTTP/S URL found in initial http discovery process.\e[0m"
 		echo "Skipping processes dependents of initial http discovery process"
 	fi
-	#Now if found any URL you have some screenshots to review with eyewitness you can open the report and check it there directly that it makes some groups and is easier
 	endwebprocess=`date +%s`
 	echo -e "\e[35mEnded web recon process\e[0m"
 	displaytime `expr $endwebprocess - $startwebprocess`
