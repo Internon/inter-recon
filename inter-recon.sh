@@ -340,9 +340,14 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 		fi
 		echo -e '## Script execution comprobation\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ -f $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt ]]; then
-			echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host.md
-			cat $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt >> $INTERDOCUFOLDER/$host.md
-			echo -e '\nwfuzz --efield url -t 40 --filter "not (c=BBB and l=BBB and w=BBB)" -w {INSERT Dictionary path} --zE urlencode -f $(pwd)/domain-or-ip-name.txt -Z -L {INSERT URL}"FUZZ{asdfnottherexxxasdf}"\n' >> $INTERDOCUFOLDER/$host.md
+			for domain in $(cat $INTERINITFOLDER/ips-with-domains.txt | grep $host | sed 's/,/\n/g' | sort -u); do skippedurls=$(cat $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt | grep $domain); done
+			if [[ $skipedurls == "" ]]; then
+				echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
+			else
+				echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host.md
+				echo $skipedurls >> $INTERDOCUFOLDER/$host.md
+				echo -e '\nwfuzz --efield url -t 40 --filter "not (c=BBB and l=BBB and w=BBB)" -w {INSERT Dictionary path} --zE urlencode -f $(pwd)/domain-or-ip-name.txt -Z -L {INSERT URL}"FUZZ{asdfnottherexxxasdf}"\n' >> $INTERDOCUFOLDER/$host.md
+			fi
 		else
 			echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
 		fi
