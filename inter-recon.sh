@@ -116,9 +116,10 @@ function initialhttpdiscoveryscan() {
 			rm -f $INTERINITFOLDER/full-initial-files.txt
 		fi
 	fi
-	for line in $(cat $INTERNMAPFOLDER/nmap-tcp-target.xml | grep "<address \|<hostname " | sed 's/.*addr="\|.*name="//g' | sed 's/" addrtype.*$/,/g' | tr -d '\n' | sed  's/" type[^>]*>\([0-9]\)/\n\1/g' | sed 's/" type[^>]*>/,/g' | sed 's/,$/\n/g'); do for domain in $(echo $line | sed 's/^[^,]*,//g' | sed 's/,/\n/g'); do ip=$(echo $line | awk -F ',' '{print $1}') ; cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $ip | sed "s/`echo $ip`/`echo $domain`/g" | awk -F',' {' print $1 ":" $2'} >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt ; done ; done
+	for line in $(cat $INTERNMAPFOLDER/nmap-tcp-target.xml | grep "<address \|<hostname " | sed 's/.*addr="\|.*name="//g' | sed 's/" addrtype.*$/,/g' | tr -d '\n' | sed  's/" type[^>]*>\([0-9]\)/\n\1/g' | sed 's/" type[^>]*>/,/g' | sed 's/,$/\n/g'); do echo $line >> $INTERINITFOLDER/ips-with-domains.txt  ; for domain in $(echo $line | sed 's/^[^,]*,//g' | sed 's/,/\n/g'); do ip=$(echo $line | awk -F ',' '{print $1}') ; cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $ip | sed "s/`echo $ip`/`echo $domain`/g" | awk -F',' {' print $1 ":" $2'} >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt ; done ; done
 	cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | awk -F ',' '{print $1 ":" $2}' >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt
-	httpx -l $INTERDISCOVERHTTPFOLDER/httpx_aux.txt -silent -threads 100 -x ALL --retries 5 -status-code | grep -v '.400.' | awk -F' ' '{print $1}' | sort -u > $INTERINITFOLDER/full-initial-files.txt
+	cat $INTERDISCOVERHTTPFOLDER/httpx_aux.txt | sort -u > $INTERDISCOVERHTTPFOLDER/httpx_aux_cleaned.txt
+	httpx -l $INTERDISCOVERHTTPFOLDER/httpx_aux_cleaned.txt -silent -threads 100 -x ALL --retries 5 -status-code | grep -v '.400.' | awk -F' ' '{print $1}' | sort -u > $INTERINITFOLDER/full-initial-files.txt
 	rm -rf $INTERAUXFOLDER/nmap
 	endhttpdiscoveryprocess=`date +%s`
 	echo -e "\e[32m--------- Ended http discovery initial files process\e[0m"
@@ -330,6 +331,14 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 			echo "Evidence host folder exist"
 		fi
 		echo -e '### '$host'\n' >> $INTERDOCUFOLDER/$host.md
+		echo -e '## Virtual Servers - Domains related\n' >> $INTERDOCUFOLDER/$host.md
+		if [[ -f $INTERINITFOLDER/ips-with-domains.txt ]]; then
+			cat $INTERINITFOLDER/ips-with-domains.txt | grep $host | sed 's/,/\n/g' | sort -u >> $INTERDOCUFOLDER/$host.md
+			echo -e '\n' >> $INTERDOCUFOLDER/$host.md
+		else
+			echo -e 'No domains found for this IP\n' >> $INTERDOCUFOLDER/$host.md
+		fi
+		echo -e '## Script execution comprobation\n' $INTERDOCUFOLDER/$host.md
 		if [[ -f $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt ]]; then
 			echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host.md
 			cat $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt >> $INTERDOCUFOLDER/$host.md
