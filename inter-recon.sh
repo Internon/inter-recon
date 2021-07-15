@@ -338,7 +338,7 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 		else
 			echo -e 'No domains found for this IP\n' >> $INTERDOCUFOLDER/$host.md
 		fi
-		echo -e '## Script execution comprobation\n' $INTERDOCUFOLDER/$host.md
+		echo -e '## Script execution comprobation\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ -f $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt ]]; then
 			echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host.md
 			cat $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt >> $INTERDOCUFOLDER/$host.md
