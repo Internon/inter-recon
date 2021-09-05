@@ -192,12 +192,12 @@ function fuzzingscan() {
 
 function screenshotscan() {
 	echo -e "\e[32m--------- Starting HTTP screenshot process\e[0m"
-	echo "This is to make screenshots of all status 200 URLs found after fuzzing"
+	echo "This is to make screenshots of all status URLs found after fuzzing if the fuzzing file has less than 50 lines"
 	startscreenshotprocess=`date +%s`
 	cat $INTERFUZZINGFOLDER/*.txt | grep http | sed 's/.* C=//g' | sed 's/ .*|//g' | sed 's/"$//g' | grep -v "^Target: " | sort -u > $INTERINITFOLDER/all-urls-fuzzing-results.txt
 	allstatus=$(cat $INTERINITFOLDER/all-urls-fuzzing-results.txt | awk -F " " '{print $1}' | sort -u)
-	for status in $allstatus; do cat $INTERINITFOLDER/all-urls-fuzzing-results.txt | grep "^$status" | awk -F " " '{print $2}' | sort -u > $INTERINITFOLDER/urls-status-$status.txt ; done
-	cat $INTERINITFOLDER/urls-status-200.txt | aquatone -screenshot-timeout 120000 -threads 50 -http-timeout 120000 --scan-timeout 120000 -out $INTERSCREENSHOTFOLDER &> $INTERDEBUGFOLDER/screenshot-output.txt
+	for status in $allstatus; do cat $INTERINITFOLDER/all-urls-fuzzing-results.txt | grep "^$status" | awk -F " " '{print $2}' | sort -u > $INTERINITFOLDER/urls-status-$status.txt ;if [[ $(cat $INTERINITFOLDER/urls-status-$status.txt | wc -l) -lt 50 ]]; then cat $INTERINITFOLDER/urls-status-$status.txt >> $INTERINITFOLDER/urls-status-screenshot.txt ; fi; done
+	cat $INTERINITFOLDER/urls-status-screenshot.txt | aquatone -screenshot-timeout 120000 -threads 50 -http-timeout 120000 --scan-timeout 120000 -out $INTERSCREENSHOTFOLDER &> $INTERDEBUGFOLDER/screenshot-output.txt
 	endscreenshotprocess=`date +%s`
 	echo -e "\e[32m--------- Ended HTTP screenshot process\e[0m"
 	displaytime `expr $endscreenshotprocess - $startscreenshotprocess`
@@ -350,6 +350,9 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 			fi
 		else
 			echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
+			echo -e 'Lines on Status files:\n' >> $INTERDOCUFOLDER/$host.md
+			for file in $(ls -la $INTERINITFOLDER | grep urls-status); do echo -e $file " lines: " $(cat $file | wc -l) "\n" >> $INTERDOCUFOLDER/$host.md ; done
+			echo -e '\n'
 		fi
 		echo -e '## Credentials\n
 ## Ports open\n
