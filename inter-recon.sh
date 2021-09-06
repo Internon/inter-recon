@@ -351,7 +351,7 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 		else
 			echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
 			echo -e 'Lines on Status files:\n' >> $INTERDOCUFOLDER/$host.md
-			for file in $(ls -la $INTERINITFOLDER | grep urls-status); do echo -e $file " lines: " $(cat $file | wc -l) "\n" >> $INTERDOCUFOLDER/$host.md ; done
+			for file in $(ls $INTERINITFOLDER | grep urls-status); do echo -e $file " lines: " $(cat $INTERINITFOLDER/$file | wc -l) >> $INTERDOCUFOLDER/$host.md ; done
 			echo -e '\n'
 		fi
 		echo -e '## Credentials\n
