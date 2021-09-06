@@ -116,9 +116,27 @@ function initialhttpdiscoveryscan() {
 			rm -f $INTERINITFOLDER/full-initial-files.txt
 		fi
 	fi
-	for line in $(cat $INTERNMAPFOLDER/nmap-tcp-target.xml | grep "<address \|<hostname " | sed 's/.*addr="\|.*name="//g' | sed 's/" addrtype.*$/,/g' | tr -d '\n' | sed  's/" type[^>]*>\([0-9]\)/\n\1/g' | sed 's/" type[^>]*>/,/g' | sed 's/,$/\n/g'); do echo $line >> $INTERINITFOLDER/ips-with-domains.txt  ; for domain in $(echo $line | sed 's/^[^,]*,//g' | sed 's/,/\n/g'); do ip=$(echo $line | awk -F ',' '{print $1}') ; cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $ip | sed "s/`echo $ip`/`echo $domain`/g" | awk -F',' {' print $1 ":" $2'} >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt ; done ; done
+	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
+	for host in $(echo $hosts)
+	do
+		smb445hosts=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $host | grep ",445," | awk -F',' '{print $1}' | sort -u)
+                ldap389=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $host | grep ",389," | awk -F',' '{print $1}' | sort -u)
+                dnsnames=$(echo $(dig -x $host @$host | grep PTR | awk -F 'PTR' '{print $2}' | tr -d '     ' | sed 's/\.$//g' | grep [a-zA-Z0-9])","$(host $host | grep -v "not found" | awk -F ' ' '{print $5}' | sed 's/\.$//g' | grep [a-zA-Z0-9]))
+		if [[ "$smb445hosts" != "" ]]; then
+			dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
+		fi
+		if [[ "$ldap389" != "" ]]; then
+			dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
+		fi
+                dnsnames=$(echo $dnsnames | sed 's/,/\n/g' | grep [a-zA-Z0-9] | grep -v "NXDOMAIN" | sort -u)
+                if [[ "$dnsnames" != "" ]]; then
+			echo $host","$dnsnames >> $INTERINITFOLDER/ips-with-domains.txt
+		fi
+        done
+	for line in $(cat $INTERINITFOLDER/ips-with-domains.txt); do for domain in $(echo $line | sed 's/^[^,]*,//g' | sed 's/,/\n/g'); do ip=$(echo $line | awk -F ',' '{print $1}') ; cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $ip | sed "s/`echo $ip`/`echo $domain`/g" | awk -F',' {' print $1 ":" $2'} >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt ; done; done
 	cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | awk -F ',' '{print $1 ":" $2}' >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt
-	cat $INTERDISCOVERHTTPFOLDER/httpx_aux.txt | sort -u > $INTERDISCOVERHTTPFOLDER/httpx_aux_cleaned.txt
+	#For clients withouth telegraf on port 9126, remove this port on the following line or change the port
+	cat $INTERDISCOVERHTTPFOLDER/httpx_aux.txt | grep -v ":5985$" | grep -v ":5986$" | grep -v ":47001$" | grep -v ":9126$" | sort -u > $INTERDISCOVERHTTPFOLDER/httpx_aux_cleaned.txt
 	httpx -l $INTERDISCOVERHTTPFOLDER/httpx_aux_cleaned.txt -silent -threads 100 -x ALL --retries 5 -status-code | grep -v '.400.' | awk -F' ' '{print $1}' | sort -u > $INTERINITFOLDER/full-initial-files.txt
 	rm -rf $INTERAUXFOLDER/nmap
 	endhttpdiscoveryprocess=`date +%s`
@@ -128,7 +146,7 @@ function initialhttpdiscoveryscan() {
 }
 
 function fuzzingscan() {
-	echo -e "\e[32m--------- Starting wfuzz process\e[0m"
+	echo -e "\e[32m--------- Starting fuzzing process\e[0m"
 	echo "This is to retrieve new paths from URLs found by nmap and http discovery httpx"
 	startwfuzzprocess=`date +%s`
 	if [ -f "$INTERAUXFOLDER/full-initial-files.txt" ]; then
@@ -352,7 +370,6 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 			echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
 			echo -e 'Lines on Status files:\n' >> $INTERDOCUFOLDER/$host.md
 			for file in $(ls $INTERINITFOLDER | grep urls-status); do echo -e $file " lines: " $(cat $INTERINITFOLDER/$file | wc -l) >> $INTERDOCUFOLDER/$host.md ; done
-			echo -e '\n'
 		fi
 		echo -e '## Credentials\n
 ## Ports open\n
