@@ -28,7 +28,7 @@ To use on network/IP as eg.:
 ## Scan types
   - all
     - portscan
-      - nmap TCP -> full ports checking host up if they have one of the following ports open (22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002)
+      - nmap TCP -> full ports checking host up if they have one of the following ports open (1025,1028,1029,10443,111,135,139,1521,161,1917,21,22,23,25,2869,3306,3389,443,445,49000,497,5000,515,53,548,5985,5986,6000,79,80,8080,8081,8090,9001,9002,9100,993,995)
       - nmap UDP -> top 100 ports with default host up process 
     - vulnscan
       - parse nmap UDP and TCP scan to files

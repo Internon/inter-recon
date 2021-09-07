@@ -76,7 +76,7 @@ function portscan() {
 		echo $INTERTARGET > $INTERINITFOLDER/targets.txt
 	fi
 	#startinterlaceprocess=`date +%s`
-	sudo nmap -sSV -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002,10443 -oX $INTERNMAPFOLDER/nmap-tcp-target.xml -oG $INTERNMAPFOLDER/nmap-tcp-target.gnmap --open -p- -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-tcp-output.txt
+	sudo nmap -sSV -T4 --max-retries 3 --min-parallelism 100 --min-hostgroup 256 -PS1025,1028,1029,10443,111,135,139,1521,161,1917,21,22,23,25,2869,3306,3389,443,445,49000,497,5000,515,53,548,5985,5986,6000,79,80,8080,8081,8090,9001,9002,9100,993,995 -oX $INTERNMAPFOLDER/nmap-tcp-target.xml -oG $INTERNMAPFOLDER/nmap-tcp-target.gnmap --open -p- -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-tcp-output.txt
 	sudo nmap -sUV -F --min-parallelism 100 --host-timeout 5m --version-intensity 0 -oX $INTERNMAPFOLDER/nmap-udp-target.xml -oG $INTERNMAPFOLDER/nmap-udp-target.gnmap --open -iL $INTERINITFOLDER/targets.txt &> $INTERDEBUGFOLDER/nmap-udp-output.txt
 	#sudo interlace -tL $INTERINITFOLDER/targets.txt -threads 100 -c "nmap -sSV -T4 -PS22,53,80,135,443,445,993,995,1521,3306,3389,5985,5986,8080,8081,8090,9001,9002 -oX - --open -p- _target_ > $INTERNMAPFOLDER/_target_.xml" &> $INTERDEBUGFOLDER/interlace-output.txt
 	#endinterlaceprocess=`date +%s`
@@ -116,24 +116,6 @@ function initialhttpdiscoveryscan() {
 			rm -f $INTERINITFOLDER/full-initial-files.txt
 		fi
 	fi
-	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
-	for host in $(echo $hosts)
-	do
-		smb445hosts=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $host | grep ",445," | awk -F',' '{print $1}' | sort -u)
-                ldap389=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $host | grep ",389," | awk -F',' '{print $1}' | sort -u)
-                dnsnames=$(echo $(dig -x $host @$host | grep PTR | awk -F 'PTR' '{print $2}' | tr -d '     ' | sed 's/\.$//g' | grep [a-zA-Z0-9])","$(host $host | grep -v "not found" | awk -F ' ' '{print $5}' | sed 's/\.$//g' | grep [a-zA-Z0-9]))
-		if [[ "$smb445hosts" != "" ]]; then
-			dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
-		fi
-		if [[ "$ldap389" != "" ]]; then
-			dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
-		fi
-                dnsnames=$(echo $dnsnames | sed 's/,/\n/g' | grep [a-zA-Z0-9] | grep -v "NXDOMAIN" | sort -u)
-		dnsnames=$(echo $dnsnames | sed 's/$/,/g' | tr -d '\n')
-                if [[ "$dnsnames" != "" ]]; then
-			echo $host","$dnsnames >> $INTERINITFOLDER/ips-with-domains.txt
-		fi
-        done
 	for line in $(cat $INTERINITFOLDER/ips-with-domains.txt); do for domain in $(echo $line | sed 's/^[^,]*,//g' | sed 's/,/\n/g'); do ip=$(echo $line | awk -F ',' '{print $1}') ; cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $ip | sed "s/`echo $ip`/`echo $domain`/g" | awk -F',' {' print $1 ":" $2'} >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt ; done; done
 	cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | awk -F ',' '{print $1 ":" $2}' >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt
 	#For clients withouth telegraf on port 9126, remove this port on the following line or change the port
@@ -239,12 +221,29 @@ function servicesparsing() {
 	echo "This is to parse the services found by nmap and make readable output"
 	startservicesparsingprocess=`date +%s`
 	uniqueservicestcp=$(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | sort -u)
-	for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/open\/tcp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-tcp.txt ; done
+	for host in $(cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'| sort -u); do cat $INTERNMAPFOLDER/nmap-tcp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/open\/tcp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-tcp.txt ; done
 	uniqueservicesudp=$(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports | sed 's/, /\n/g' | sed 's/.*Ports: //g' | awk -F'/' '{print $5}' | sed 's/|/-/g' | sort -u)
-    for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}'); do cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/[a-z]*\/udp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-udp.txt ; done
+    for host in $(cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u); do cat $INTERNMAPFOLDER/nmap-udp-target.gnmap | grep $host | grep Ports | sed -e 's/.*Ports: //g' -e 's/, /\n/g' | sed -e s/^/$host,/g -e 's/\/[a-z]*\/udp\/\//,/g' -e 's/\/\//,/g' -e 's/\/$//g' | sed -e "s/\/        Ignored State:.*//g" >> $INTERINITFOLDER/full-nmap-parsed-udp.txt ; done
 	#for i in $(ls $INTERNMAPFOLDER/); do portsandservices=$(cat $INTERNMAPFOLDER/$i | grep 'service name=\"' | sed 's/.*portid="//g' | sed 's/".*service name=\"/,/g' | sed 's/" product="/,/g' | sed 's/" version="/,version /g' | sed 's/" extrainfo="/ /g'  | sed 's/" method="/,method /g' | sed 's/" conf="/,conf /g' | sed 's/".*//g'); uniqueservices=$(echo "$portsandservices" | awk -F ',' '{print $2}' | awk -F' ' '{print $1}' | sort -u); for service in $(echo "$uniqueservices"); do echo "$portsandservices" | grep ",$service$\|,$service," | awk -F ',' -v ip=$(echo $i | sed 's/.xml//g') '{print ip","$1","$2","$3","$4","$5}' >> $INTERSERVICESFOLDER/$service-service.txt; done ;done
 	for servicetcp in $(echo $uniqueservicestcp); do cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep ",$servicetcp," >> $INTERSERVICESFOLDER/tcp-$(echo $servicetcp | sed 's/|/-/g' | tr -d '?')-service.txt; done
 	for serviceudp in $(echo $uniqueservicesudp); do cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep ",$serviceudp," >> $INTERSERVICESFOLDER/udp-$(echo $serviceudp | sed 's/|/-/g' | tr -d '?')-service.txt; done
+	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
+	for host in $(echo $hosts)
+        do
+                smb445hosts=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $host | grep ",445," | awk -F',' '{print $1}' | sort -u)
+                ldap389=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $host | grep ",389," | awk -F',' '{print $1}' | sort -u)
+                dnsnames=$(echo $(dig -x $host @$host | grep PTR | awk -F 'PTR' '{print $2}' | tr -d '     ' | sed 's/\.$//g' | grep [a-zA-Z0-9])","$(host $host | grep -v "not found" | awk -F ' ' '{print $5}' | sed 's/\.$//g' | grep [a-zA-Z0-9]))
+                if [[ "$smb445hosts" != "" ]]; then
+                        dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
+                fi
+                if [[ "$ldap389" != "" ]]; then
+                        dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
+                fi
+                dnsnames=$(echo $dnsnames | sed 's/,/\n/g' | grep [a-zA-Z0-9] | grep -v "NXDOMAIN" | sort -u | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g')
+                if [[ "$dnsnames" != "" ]]; then
+                        echo $host","$dnsnames >> $INTERINITFOLDER/ips-with-domains.txt
+                fi
+        done
 	echo "Review services output in $INTERSERVICESFOLDER folder"
 	endservicesparsingprocess=`date +%s`
 	echo -e "\e[32m--------- Ended services parsing process\e[0m"
