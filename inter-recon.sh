@@ -242,7 +242,9 @@ function servicesparsing() {
                 dnsnames=$(echo $dnsnames | sed 's/,/\n/g' | grep [a-zA-Z0-9] | grep -v "NXDOMAIN" | sort -u | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g')
                 if [[ "$dnsnames" != "" ]]; then
                         echo $host","$dnsnames >> $INTERINITFOLDER/ips-with-domains.txt
-                fi
+		else
+			echo $host >> $INTERINITFOLDER/ips-with-domains.txt
+		fi
         done
 	echo "Review services output in $INTERSERVICESFOLDER folder"
 	endservicesparsingprocess=`date +%s`
@@ -324,30 +326,28 @@ function dnsscan() {
         displaytime `expr $enddnsprocess - $startdnsprocess`
 	echo "Execution time of dns recon process was$timecalc."
 }
+
 function addingdocu() {
 	echo -e "\e[32m--------- Adding web scan documentation to files\e[0m"
 	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
-	echo -e "\e\n[33m[WARNING] - Remember to save documentation files before follow with this process.\e[0m"
-	echo -e "Press any key to follow with the process: "
-        read keytofollow
-        for host in $hosts; do
-		echo -e '## Script execution comprobation\n' >> $INTERDOCUFOLDER/$host.md
+	for host in $hosts; do
+		echo -e '## Script execution comprobation\n' >> $INTERDOCUFOLDER/$host-comprobation.md
                 if [[ -f $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt ]]; then
                         for domain in $(cat $INTERINITFOLDER/ips-with-domains.txt | grep $host | sed 's/,/\n/g' | sort -u); do skippedurls=$(cat $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt | grep $domain); done
                         if [[ $skippedurls == "" ]]; then
-                                echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
+                                echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host-comprobation.md
                         else
-                                echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host.md
-                                echo $skippedurls >> $INTERDOCUFOLDER/$host.md
-                                echo -e '\nwfuzz --efield url -t 40 --filter "not (c=BBB and l=BBB and w=BBB)" -w {INSERT Dictionary path} --zE urlencode -f $(pwd)/domain-or-ip-name.txt -Z -L {INSERT URL}"FUZZ{asdfnottherexxxasdf}"\n' >> $INTERDOCUFOLDER/$host.md
+                                echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host-comprobation.md
+                                echo $skippedurls >> $INTERDOCUFOLDER/$host-comprobation.md
+                                echo -e '\nwfuzz --efield url -t 40 --filter "not (c=BBB and l=BBB and w=BBB)" -w {INSERT Dictionary path} --zE urlencode -f $(pwd)/domain-or-ip-name.txt -Z -L {INSERT URL}"FUZZ{asdfnottherexxxasdf}"\n' >> $INTERDOCUFOLDER/$host-comprobation.md
                         fi
                 else
-                        echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
-                        echo -e 'Lines on Status files:\n' >> $INTERDOCUFOLDER/$host.md
+                        echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host-comprobation.md
+                        echo -e 'Lines on Status files:\n' >> $INTERDOCUFOLDER/$host-comprobation.md
 			if [[ $(ls $INTERINITFOLDER | grep urls-status) == "" ]]; then
-				echo -e 'No status files found' >> $INTERDOCUFOLDER/$host.md
+				echo -e 'No status files found' >> $INTERDOCUFOLDER/$host-comprobation.md
 			else
-				for file in $(ls $INTERINITFOLDER | grep urls-status); do echo -e $file " lines: " $(cat $INTERINITFOLDER/$file | wc -l) >> $INTERDOCUFOLDER/$host.md ; done
+				for file in $(ls $INTERINITFOLDER | grep urls-status); do echo -e $file " lines: " $(cat $INTERINITFOLDER/$file | wc -l) >> $INTERDOCUFOLDER/$host-comprobation.md ; done
 			fi
                 fi
         done
@@ -375,11 +375,11 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 	        	mkdir $INTERDOCUFOLDER/evidences/$host
 		else
 			echo "Evidence host folder exist"
-		fi
+			fi
 		echo -e '### '$host'\n' >> $INTERDOCUFOLDER/$host.md
 		echo -e '## Virtual Servers - Domains related\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ -f $INTERINITFOLDER/ips-with-domains.txt ]]; then
-			cat $INTERINITFOLDER/ips-with-domains.txt | grep "$host," | sed 's/,/\n/g' | sort -u >> $INTERDOCUFOLDER/$host.md
+			cat $INTERINITFOLDER/ips-with-domains.txt | grep "$host,\|$host$" | sed 's/,/\n/g' | sort -u >> $INTERDOCUFOLDER/$host.md
 			echo -e '\n' >> $INTERDOCUFOLDER/$host.md
 		else
 			echo -e 'No domains found for this IP\n' >> $INTERDOCUFOLDER/$host.md
