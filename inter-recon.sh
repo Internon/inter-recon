@@ -129,6 +129,7 @@ function initialhttpdiscoveryscan() {
 			dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
 		fi
                 dnsnames=$(echo $dnsnames | sed 's/,/\n/g' | grep [a-zA-Z0-9] | grep -v "NXDOMAIN" | sort -u)
+		dnsnames=$(echo $dnsnames | sed 's/$/,/g' | tr -d '\n')
                 if [[ "$dnsnames" != "" ]]; then
 			echo $host","$dnsnames >> $INTERINITFOLDER/ips-with-domains.txt
 		fi
@@ -351,7 +352,7 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 		echo -e '### '$host'\n' >> $INTERDOCUFOLDER/$host.md
 		echo -e '## Virtual Servers - Domains related\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ -f $INTERINITFOLDER/ips-with-domains.txt ]]; then
-			cat $INTERINITFOLDER/ips-with-domains.txt | grep $host | sed 's/,/\n/g' | sort -u >> $INTERDOCUFOLDER/$host.md
+			cat $INTERINITFOLDER/ips-with-domains.txt | grep "$host," | sed 's/,/\n/g' | sort -u >> $INTERDOCUFOLDER/$host.md
 			echo -e '\n' >> $INTERDOCUFOLDER/$host.md
 		else
 			echo -e 'No domains found for this IP\n' >> $INTERDOCUFOLDER/$host.md
