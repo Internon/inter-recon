@@ -325,7 +325,32 @@ function dnsscan() {
         displaytime `expr $enddnsprocess - $startdnsprocess`
 	echo "Execution time of dns recon process was$timecalc."
 }
+function addingdocu() {
+	echo -e "\e[32m--------- Adding web scan documentation to files\e[0m"
+	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
+        for host in $hosts; do
+		echo -e '## Script execution comprobation\n' >> $INTERDOCUFOLDER/$host.md
+                if [[ -f $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt ]]; then
+                        for domain in $(cat $INTERINITFOLDER/ips-with-domains.txt | grep $host | sed 's/,/\n/g' | sort -u); do skippedurls=$(cat $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt | grep $domain); done
+                        if [[ $skippedurls == "" ]]; then
+                                echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
+                        else
+                                echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host.md
+                                echo $skippedurls >> $INTERDOCUFOLDER/$host.md
+                                echo -e '\nwfuzz --efield url -t 40 --filter "not (c=BBB and l=BBB and w=BBB)" -w {INSERT Dictionary path} --zE urlencode -f $(pwd)/domain-or-ip-name.txt -Z -L {INSERT URL}"FUZZ{asdfnottherexxxasdf}"\n' >> $INTERDOCUFOLDER/$host.md
+                        fi
+                else
+                        echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
+                        echo -e 'Lines on Status files:\n' >> $INTERDOCUFOLDER/$host.md
+			if [[ $(ls $INTERINITFOLDER | grep urls-status) == "" ]]; then
+				echo -e 'No status files found' >> $INTERDOCUFOLDER/$host.md
+			else
+				for file in $(ls $INTERINITFOLDER | grep urls-status); do echo -e $file " lines: " $(cat $INTERINITFOLDER/$file | wc -l) >> $INTERDOCUFOLDER/$host.md ; done
+			fi
+                fi
+        done
 
+}
 function makedocu() {
 	echo -e "\e[32m--------- Making documentation files\e[0m"
 	if [[ ! -d $INTERDOCUFOLDER ]]; then
@@ -356,21 +381,6 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 			echo -e '\n' >> $INTERDOCUFOLDER/$host.md
 		else
 			echo -e 'No domains found for this IP\n' >> $INTERDOCUFOLDER/$host.md
-		fi
-		echo -e '## Script execution comprobation\n' >> $INTERDOCUFOLDER/$host.md
-		if [[ -f $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt ]]; then
-			for domain in $(cat $INTERINITFOLDER/ips-with-domains.txt | grep $host | sed 's/,/\n/g' | sort -u); do skippedurls=$(cat $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt | grep $domain); done
-			if [[ $skippedurls == "" ]]; then
-				echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
-			else
-				echo -e 'Seems that there were some connection errors on the fuzzing part, we will need to make a manual execution on:\n' >> $INTERDOCUFOLDER/$host.md
-				echo $skippedurls >> $INTERDOCUFOLDER/$host.md
-				echo -e '\nwfuzz --efield url -t 40 --filter "not (c=BBB and l=BBB and w=BBB)" -w {INSERT Dictionary path} --zE urlencode -f $(pwd)/domain-or-ip-name.txt -Z -L {INSERT URL}"FUZZ{asdfnottherexxxasdf}"\n' >> $INTERDOCUFOLDER/$host.md
-			fi
-		else
-			echo -e 'Script execution seems correct\n' >> $INTERDOCUFOLDER/$host.md
-			echo -e 'Lines on Status files:\n' >> $INTERDOCUFOLDER/$host.md
-			for file in $(ls $INTERINITFOLDER | grep urls-status); do echo -e $file " lines: " $(cat $INTERINITFOLDER/$file | wc -l) >> $INTERDOCUFOLDER/$host.md ; done
 		fi
 		echo -e '## Credentials\n
 ## Ports open\n
@@ -636,7 +646,9 @@ function scanall() {
 		portscan
 	fi
 	vulnscan
+	makedocu
 	webscan
+	addingdocu
 	endallprocess=`date +%s`
 	echo -e "\e[35mEnded all processes\e[0m"
 	displaytime `expr $endallprocess - $startallprocess`
@@ -719,13 +731,13 @@ if ([[ ! -z $INTERTARGET ]] && [[ !  -z $INTERDICT ]] && [[ !  -z $INTERSCANTYPE
 	case $INTERSCANTYPE in
 		all)
 			scanall
-			makedocu
 			followingsteps
 			exit 1
 			;;
 		web)
 			webscan
 			makedocu
+			addingdocu
 			followingsteps
 			exit 1
 			;;
