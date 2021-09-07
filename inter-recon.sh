@@ -328,6 +328,9 @@ function dnsscan() {
 function addingdocu() {
 	echo -e "\e[32m--------- Adding web scan documentation to files\e[0m"
 	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
+	echo -e "\e\n[33m[WARNING] - Remember to save documentation files before follow with this process.\e[0m"
+	echo -e "Press any key to follow with the process: "
+        read keytofollow
         for host in $hosts; do
 		echo -e '## Script execution comprobation\n' >> $INTERDOCUFOLDER/$host.md
                 if [[ -f $INTERINITFOLDER/aux/wfuzz-skipped-urls.txt ]]; then
