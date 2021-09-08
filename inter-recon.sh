@@ -390,7 +390,7 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
 			if [[ -f $INTERINITFOLDER/full-nmap-parsed-tcp.txt ]]; then
 
-			        cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+			        cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep "$host," >> $INTERDOCUFOLDER/$host.md
 			else
 				echo "No TCP ports found on host $host"
 				echo -e "No TCP ports found on host $host"
@@ -400,7 +400,7 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 > UDP\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
 			if [[ -f $INTERINITFOLDER/full-nmap-parsed-udp.txt ]]; then
-				cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep $host >> $INTERDOCUFOLDER/$host.md
+				cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep "$host," >> $INTERDOCUFOLDER/$host.md
 			else
 				echo "No UDP ports found on host $host"
 				echo -e "No UDP ports found on host $host"
@@ -409,7 +409,7 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 		echo -e '\n
 ## Gaining access\n' >> $INTERDOCUFOLDER/$host.md
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERSERVICESFOLDER/*-service.txt | grep $host | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$host.md
+			cat $INTERSERVICESFOLDER/*-service.txt | grep "$host," | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$host.md
 		fi
 		echo -e '\n
 ## Privesc\n
