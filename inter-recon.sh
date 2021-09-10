@@ -370,46 +370,48 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 	else
 		echo "Evidence folder exist"
 	fi
+	dateexecution=$(date "+%d-%m-%Y_%H-%M")
+	nameoutput=$(echo $host"_"$dateexecution".md")
 	for host in $hosts; do
 		if [[ ! -d $INTERDOCUFOLDER/evidences/$host ]]; then
 	        	mkdir $INTERDOCUFOLDER/evidences/$host
 		else
 			echo "Evidence host folder exist"
 			fi
-		echo -e '### '$host'\n' >> $INTERDOCUFOLDER/$host.md
-		echo -e '## Virtual Servers - Domains related\n' >> $INTERDOCUFOLDER/$host.md
+		echo -e '### '$host'\n' >> $INTERDOCUFOLDER/$nameoutput
+		echo -e '## Virtual Servers - Domains related\n' >> $INTERDOCUFOLDER/$nameoutput
 		if [[ -f $INTERINITFOLDER/ips-with-domains.txt ]]; then
-			cat $INTERINITFOLDER/ips-with-domains.txt | grep "$host,\|$host$" | sed 's/,/\n/g' | sort -u >> $INTERDOCUFOLDER/$host.md
-			echo -e '\n' >> $INTERDOCUFOLDER/$host.md
+			cat $INTERINITFOLDER/ips-with-domains.txt | grep "$host,\|$host$" | sed 's/,/\n/g' | sort -u >> $INTERDOCUFOLDER/$nameoutput
+			echo -e '\n' >> $INTERDOCUFOLDER/$nameoutput
 		else
-			echo -e 'No domains found for this IP\n' >> $INTERDOCUFOLDER/$host.md
+			echo -e 'No domains found for this IP\n' >> $INTERDOCUFOLDER/$nameoutput
 		fi
 		echo -e '## Credentials\n
 ## Ports open\n
-> TCP\n' >> $INTERDOCUFOLDER/$host.md
+> TCP\n' >> $INTERDOCUFOLDER/$nameoutput
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
 			if [[ -f $INTERINITFOLDER/full-nmap-parsed-tcp.txt ]]; then
 
-			        cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep "$host," >> $INTERDOCUFOLDER/$host.md
+			        cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep "$host," >> $INTERDOCUFOLDER/$nameoutput
 			else
 				echo "No TCP ports found on host $host"
 				echo -e "No TCP ports found on host $host"
 			fi
 		fi
 		echo -e '\n
-> UDP\n' >> $INTERDOCUFOLDER/$host.md
+> UDP\n' >> $INTERDOCUFOLDER/$nameoutput
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
 			if [[ -f $INTERINITFOLDER/full-nmap-parsed-udp.txt ]]; then
-				cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep "$host," >> $INTERDOCUFOLDER/$host.md
+				cat $INTERINITFOLDER/full-nmap-parsed-udp.txt | grep "$host," >> $INTERDOCUFOLDER/$nameoutput
 			else
 				echo "No UDP ports found on host $host"
 				echo -e "No UDP ports found on host $host"
 			fi
 		fi
 		echo -e '\n
-## Gaining access\n' >> $INTERDOCUFOLDER/$host.md
+## Gaining access\n' >> $INTERDOCUFOLDER/$nameoutput
 		if [[ $INTERSCANTYPE == "vuln" || $INTERSCANTYPE == "all" ]]; then
-			cat $INTERSERVICESFOLDER/*-service.txt | grep "$host," | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$host.md
+			cat $INTERSERVICESFOLDER/*-service.txt | grep "$host," | awk -F ',' '{print "> " $3 " service" }' | sort -u >> $INTERDOCUFOLDER/$nameoutput
 		fi
 		echo -e '\n
 ## Privesc\n
@@ -422,7 +424,7 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 > Database information\n
 > Browser information if GUI\n
 > Credentials on files/proofs.txt\n
-' >> $INTERDOCUFOLDER/$host.md
+' >> $INTERDOCUFOLDER/$nameoutput
 	done
 }
 
