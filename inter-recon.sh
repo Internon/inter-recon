@@ -373,8 +373,8 @@ No open ports found' > $INTERDOCUFOLDER/Target.md
 		echo "Evidence folder exist"
 	fi
 	dateexecution=$(date "+%d-%m-%Y_%H-%M")
-	nameoutput=$(echo $host"_"$dateexecution".md")
 	for host in $hosts; do
+		nameoutput=$(echo $host"_"$dateexecution".md")
 		if [[ ! -d $INTERDOCUFOLDER/evidences/$host ]]; then
 	        	mkdir $INTERDOCUFOLDER/evidences/$host
 		else
