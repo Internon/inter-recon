@@ -231,16 +231,16 @@ function servicesparsing() {
 	hosts=$(cat $INTERNMAPFOLDER/nmap-*-target.gnmap | grep Ports: | awk -F' ' '{print $2}' | sort -u)
 	for host in $(echo $hosts)
         do
-                smb445hosts=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $host | grep ",445," | awk -F',' '{print $1}' | sort -u)
-                ldap389=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep $host | grep ",389," | awk -F',' '{print $1}' | sort -u)
-                dnsnames=$(echo $(dig -x $host @$host | grep PTR | awk -F 'PTR' '{print $2}' | tr -d '     ' | sed 's/\.$//g' | grep [a-zA-Z0-9])","$(host $host | grep -v "not found" | awk -F ' ' '{print $5}' | sed 's/\.$//g' | grep [a-zA-Z0-9]))
+                smb445hosts=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep "$host," | grep ",445," | awk -F',' '{print $1}' | sort -u)
+                ldap389=$(cat $INTERSERVICESFOLDER/tcp-*-service.txt | grep "$host," | grep ",389," | awk -F',' '{print $1}' | sort -u)
+                dnsnames=$(echo $(dig -x $host @$host | grep PTR | awk -F 'PTR' '{print $2}' | tr -d '     ' | sed 's/\.$//g' | grep [a-zA-Z0-9])","$(host $host | grep -v "not found" | awk -F ' ' '{print $5}' | sed 's/\.$//g' | grep [a-zA-Z0-9] | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g'))
                 if [[ "$smb445hosts" != "" ]]; then
                         dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
                 fi
                 if [[ "$ldap389" != "" ]]; then
-                        dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
+                        dnsnames=$(echo $(crackmapexec ldap $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec ldap $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
                 fi
-		dnsnames=$(echo $dnsnames","$(cat $INTERNMAPFOLDER/nmap-tcp-target.xml | grep "addr=\|hostname " | awk -F '"' '{print $2}' | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g' | sed 's/\([a-z]\),\([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\)/\1\n\2/g' | grep $host | sed 's/^[^,]*,//g' | sort -u  | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g'))
+		dnsnames=$(echo $dnsnames","$(cat $INTERNMAPFOLDER/nmap-tcp-target.xml | grep "addr=\|hostname " | awk -F '"' '{print $2}' | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g' | sed 's/\([a-z]\),\([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\)/\1\n\2/g' | grep "$host," | sed 's/^[^,]*,//g' | sort -u  | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g'))
                 dnsnames=$(echo $dnsnames | sed 's/,/\n/g' | grep [a-zA-Z0-9] | grep -v "NXDOMAIN" | sort -u | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g')
                 if [[ "$dnsnames" != "" ]]; then
                         echo $host","$dnsnames >> $INTERINITFOLDER/ips-with-domains.txt
