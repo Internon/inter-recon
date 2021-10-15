@@ -116,6 +116,7 @@ function initialhttpdiscoveryscan() {
 			rm -f $INTERINITFOLDER/full-initial-files.txt
 		fi
 	fi
+
 	for line in $(cat $INTERINITFOLDER/ips-with-domains.txt); do for domain in $(echo $line | sed 's/^[^,]*,//g' | sed 's/,/\n/g'); do ip=$(echo $line | awk -F ',' '{print $1}') ; cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | grep $ip | sed "s/`echo $ip`/`echo $domain`/g" | awk -F',' {' print $1 ":" $2'} >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt ; done; done
 	cat $INTERINITFOLDER/full-nmap-parsed-tcp.txt | awk -F ',' '{print $1 ":" $2}' >> $INTERDISCOVERHTTPFOLDER/httpx_aux.txt
 	#For clients withouth telegraf on port 9126, remove this port on the following line or change the port
@@ -239,6 +240,7 @@ function servicesparsing() {
                 if [[ "$ldap389" != "" ]]; then
                         dnsnames=$(echo $(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/,/g -e s/\).*//g)","$(crackmapexec smb $host | sed -e s/.*name://g -e s/\).*\(domain:/./g -e s/\).*//g)","$dnsnames)
                 fi
+		dnsnames=$(echo $dnsnames","$(cat $INTERNMAPFOLDER/nmap-tcp-target.xml | grep "addr=\|hostname " | awk -F '"' '{print $2}' | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g' | sed 's/\([a-z]\),\([0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\)/\1\n\2/g' | grep $host | sed 's/^[^,]*,//g' | sort -u  | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g'))
                 dnsnames=$(echo $dnsnames | sed 's/,/\n/g' | grep [a-zA-Z0-9] | grep -v "NXDOMAIN" | sort -u | sed 's/$/,/g' | tr -d '\n' | sed 's/,$//g')
                 if [[ "$dnsnames" != "" ]]; then
                         echo $host","$dnsnames >> $INTERINITFOLDER/ips-with-domains.txt
